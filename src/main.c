@@ -31,8 +31,8 @@ void scheduler_init(Scheduler *scheduler) {
     exit(1);
   }
 
-  // TODO: should be one thread per core
-  const int NUM_THREADS = 4;
+  // Run one thread per CPU core
+  const int NUM_THREADS = sysconf(_SC_NPROCESSORS_ONLN);
 
   scheduler->threads = calloc(NUM_THREADS, sizeof(Thread));
   assert(scheduler->threads != NULL);
