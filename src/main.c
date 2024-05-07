@@ -27,12 +27,16 @@ typedef array_t(handler) handler_array_t;
 #define STATUS_RUNNABLE 1  // Not running, but has pending messages
 #define STATUS_RUNNING 2   // Scheduled and currently running
 
+typedef unsigned int PID;
+
 typedef struct Actor {
-  int id; // set by the scheduler
+  PID pid; // set by the scheduler
   atomic_int status;
 
-  pthread_rwlock_t handlers_rwlock;
-  handler_array_t handlers;
+  void (*handler_func)(void *);
+
+  void *public;
+  void *private;
 } Actor;
 
 typedef struct {
@@ -75,8 +79,7 @@ void scheduler_init(Scheduler *scheduler) {
   }
 
   // Run one thread per CPU core
-  /* const int NUM_THREADS = sysconf(_SC_NPROCESSORS_ONLN); */
-  const int NUM_THREADS = 2;
+  const int NUM_THREADS = sysconf(_SC_NPROCESSORS_ONLN);
 
   scheduler->threads = calloc(NUM_THREADS, sizeof(Thread));
   assert(scheduler->threads != NULL);
@@ -106,7 +109,7 @@ void scheduler_init(Scheduler *scheduler) {
 }
 
 void scheduler_launch(Scheduler *scheduler, Actor *actor) {
-  actor->id = scheduler->next_actor_id++;
+  actor->pid = scheduler->next_actor_id++;
 
   assert(pthread_rwlock_wrlock(&scheduler->known_actors_rwlock) == 0);
   array_push(&scheduler->known_actors, actor);
@@ -115,24 +118,6 @@ void scheduler_launch(Scheduler *scheduler, Actor *actor) {
 
 static bool set_actor_status(Actor *actor, int from, int to) {
   return atomic_compare_exchange_strong(&actor->status, &from, to);
-}
-
-static handler_func lookup_handler(Actor *actor, int message) {
-  handler_func ret = NULL;
-
-  assert(pthread_rwlock_rdlock(&actor->handlers_rwlock) == 0);
-
-  for (int i = 0; i < actor->handlers.length; i++) {
-    struct handler *h = &actor->handlers.data[i];
-    if (h->message == message) {
-      ret = h->func;
-      break;
-    }
-  }
-
-  pthread_rwlock_unlock(&actor->handlers_rwlock);
-
-  return ret;
 }
 
 void *scheduler_worker(void *arg) {
@@ -162,12 +147,7 @@ void *scheduler_worker(void *arg) {
     if (current_actor) {
       printf("Thread %d: Found an actor to run:\n", thread->id);
 
-      handler_func handler;
-      if ((handler = lookup_handler(current_actor, MESSAGE_INIT))) {
-        handler(current_actor);
-      } else {
-        printf("BUG: Handler not found!\n");
-      }
+      current_actor->handler_func(current_actor->private);
 
       assert(set_actor_status(current_actor, STATUS_RUNNING, STATUS_IDLE) == true);
     } else {
@@ -182,29 +162,14 @@ void *scheduler_worker(void *arg) {
 
 //
 
-void actor_init(Actor *actor) {
+void actor_init(Actor *actor, void *private, void (*handler_func)(void *)) {
   actor->status = STATUS_RUNNABLE;
-
-  array_init(&actor->handlers);
-
-  if (pthread_rwlock_init(&actor->handlers_rwlock, NULL) != 0) {
-    perror("pthread_rwlock_init");
-    exit(1);
-  }
+  actor->handler_func = handler_func;
+  actor->public = NULL;
+  actor->private = private;
 }
 
-void actor_add_handler(Actor *actor, int message, void (*func)(struct Actor *)) {
-  handler h;
-
-  h.message = message;
-  h.func = func;
-
-  assert(pthread_rwlock_wrlock(&actor->handlers_rwlock) == 0);
-  array_push(&actor->handlers, h);
-  pthread_rwlock_unlock(&actor->handlers_rwlock);
-}
-
-static void basic_actor_init(Actor *self) {
+static void basic_actor_handler(void *self) {
   printf("Hello from a basic actor.\n");
 }
 
@@ -212,13 +177,11 @@ static void basic_actor_init(Actor *self) {
 
 int main(int argc, char *argv[]) {
   Scheduler scheduler;
+  Actor basic_actor;
 
   scheduler_init(&scheduler);
 
-  Actor basic_actor;
-
-  actor_init(&basic_actor);
-  actor_add_handler(&basic_actor, MESSAGE_INIT, basic_actor_init);
+  actor_init(&basic_actor, NULL, basic_actor_handler);
 
   scheduler_launch(&scheduler, &basic_actor);
 
