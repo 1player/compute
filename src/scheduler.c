@@ -27,44 +27,52 @@ typedef struct Scheduler {
 
 Scheduler global_scheduler;
 
-static void *scheduler_worker(void *arg) {
+static Actor *find_actor_to_run() {
+  Actor *actor_to_run = NULL;
+
+  assert(pthread_rwlock_rdlock(&global_scheduler.known_actors_rwlock) == 0);
+
+  for (int i = 0; i < global_scheduler.known_actors.length; i++) {
+    Actor *actor = global_scheduler.known_actors.data[i];
+    if (actor->status != STATUS_RUNNABLE) {
+      continue;
+    }
+
+    if (actor_set_status(actor, STATUS_RUNNABLE, STATUS_RUNNING)) {
+      actor_to_run = actor;
+      break;
+    }
+  }
+
+  assert(pthread_rwlock_unlock(&global_scheduler.known_actors_rwlock) == 0);
+
+  return actor_to_run;
+}
+
+static void wait_for_work() {
+  pthread_mutex_lock(&global_scheduler.got_work_mutex);
+  assert(pthread_cond_wait(&global_scheduler.got_work_cond, &global_scheduler.got_work_mutex) == 0);
+  pthread_mutex_unlock(&global_scheduler.got_work_mutex);
+}
+
+static void *thread_main(void *arg) {
   SchedulerThread *thread = (SchedulerThread *)arg;
   Actor *current_actor;
 
   while (1) {
-    // Lock list of known actors, and find the first runnable one
-    current_actor = NULL;
-
-    assert(pthread_rwlock_rdlock(&global_scheduler.known_actors_rwlock) == 0);
-    for (int i = 0; i < global_scheduler.known_actors.length; i++) {
-      Actor *actor = global_scheduler.known_actors.data[i];
-      if (actor->status != STATUS_RUNNABLE) {
-        continue;
-      }
-
-      if (actor_set_status(actor, STATUS_RUNNABLE, STATUS_RUNNING)) {
-        current_actor = actor;
-        break;
-      }
-    }
-    assert(pthread_rwlock_unlock(&global_scheduler.known_actors_rwlock) == 0);
-
+    current_actor = find_actor_to_run();
 
     if (current_actor) {
       printf("Thread %d: Found an actor to run:\n", thread->id);
-
       current_actor->handler_func(current_actor->private);
-
       assert(actor_set_status(current_actor, STATUS_RUNNING, STATUS_IDLE) == true);
     } else {
       printf("Thread %d: Found nothing to run. Going to sleep\n", thread->id);
-
-      pthread_mutex_lock(&global_scheduler.got_work_mutex);
-      assert(pthread_cond_wait(&global_scheduler.got_work_cond, &global_scheduler.got_work_mutex) == 0);
-      pthread_mutex_unlock(&global_scheduler.got_work_mutex);
+      wait_for_work();
     }
   }
 }
+
 
 void scheduler_init() {
   pthread_attr_t attr;
@@ -102,7 +110,7 @@ void scheduler_init() {
     SchedulerThread *thread = &global_scheduler.threads[i];
     thread->id = i;
 
-    if (pthread_create(&thread->os_handle, &attr, &scheduler_worker, (void *)thread) != 0) {
+    if (pthread_create(&thread->os_handle, &attr, &thread_main, (void *)thread) != 0) {
       perror("pthread_create");
       exit(1);
     }
