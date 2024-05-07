@@ -27,10 +27,15 @@ typedef struct Scheduler {
 
 Scheduler global_scheduler;
 
+#define LOCK_ACTORS_READ assert(pthread_rwlock_rdlock(&global_scheduler.known_actors_rwlock) == 0)
+#define LOCK_ACTORS_WRITE assert(pthread_rwlock_wrlock(&global_scheduler.known_actors_rwlock) == 0)
+#define UNLOCK_ACTORS pthread_rwlock_unlock(&global_scheduler.known_actors_rwlock);
+
+
 static Actor *find_actor_to_run() {
   Actor *actor_to_run = NULL;
 
-  assert(pthread_rwlock_rdlock(&global_scheduler.known_actors_rwlock) == 0);
+  LOCK_ACTORS_READ;
 
   for (int i = 0; i < global_scheduler.known_actors.length; i++) {
     Actor *actor = global_scheduler.known_actors.data[i];
@@ -44,9 +49,15 @@ static Actor *find_actor_to_run() {
     }
   }
 
-  assert(pthread_rwlock_unlock(&global_scheduler.known_actors_rwlock) == 0);
+  UNLOCK_ACTORS;
 
   return actor_to_run;
+}
+
+static void notify_got_work() {
+  pthread_mutex_lock(&global_scheduler.got_work_mutex);
+  pthread_cond_signal(&global_scheduler.got_work_cond);
+  pthread_mutex_unlock(&global_scheduler.got_work_mutex);
 }
 
 static void wait_for_work() {
@@ -64,7 +75,12 @@ static void *thread_main(void *arg) {
 
     if (current_actor) {
       printf("Thread %d: Found an actor to run:\n", thread->id);
-      current_actor->handler_func(current_actor->private);
+      Message *msg = mailbox_pop(&current_actor->mailbox);
+      if (!msg) {
+        printf("BUG msg is NULL\n");
+        exit(1);
+      }
+      current_actor->handler_func(current_actor->private, msg);
       assert(actor_set_status(current_actor, STATUS_RUNNING, STATUS_IDLE) == true);
     } else {
       printf("Thread %d: Found nothing to run. Going to sleep\n", thread->id);
@@ -119,10 +135,51 @@ void scheduler_init() {
   }
 }
 
-void scheduler_start(Actor *actor) {
-  actor->pid = global_scheduler.next_actor_id++;
+PID scheduler_start(Actor *actor) {
+  PID actor_pid = global_scheduler.next_actor_id++;
+  actor->pid = actor_pid;
 
-  assert(pthread_rwlock_wrlock(&global_scheduler.known_actors_rwlock) == 0);
+  LOCK_ACTORS_WRITE;
   array_push(&global_scheduler.known_actors, actor);
-  pthread_rwlock_unlock(&global_scheduler.known_actors_rwlock);
+  UNLOCK_ACTORS;
+
+  return actor_pid;
+}
+
+// Assumes actors are locked
+static Actor *lookup_pid(PID pid) {
+  for (int i = 0; i < global_scheduler.known_actors.length; i++) {
+    Actor *actor = global_scheduler.known_actors.data[i];
+
+    if (actor->pid == pid)
+      return actor;
+  }
+
+  return NULL;
+}
+
+
+void scheduler_send(PID pid, Message *message) {
+  LOCK_ACTORS_READ;
+
+  Actor *actor = lookup_pid(pid);
+  if (!actor) {
+    printf("Trying to send message to unknown actor.\n");
+    goto end;
+  }
+
+  mailbox_push(&actor->mailbox, message);
+
+  // TODO: this is not thread safe. The status field should be
+  // replaced with two boolean values: `has messages`, and `is
+  // running`.
+  if (!actor_set_status(actor, actor->status, STATUS_RUNNABLE)) {
+    printf("BUG\n");
+    exit(1);
+  }
+
+  notify_got_work();
+
+ end:
+  UNLOCK_ACTORS;
 }
