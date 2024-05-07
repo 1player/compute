@@ -30,28 +30,8 @@ bool actor_set_status(Actor *actor, int from, int to);
 
 // Scheduler
 
-typedef array_t(Actor *) actor_array_t;
 
-typedef struct {
-  int id;
-  pthread_t os_handle;
-  struct Scheduler *scheduler;
-} SchedulerThread;
-
-typedef struct Scheduler {
-  int num_threads;
-  SchedulerThread *threads;
-
-  int next_actor_id;
-
-  pthread_mutex_t got_work_mutex;
-  pthread_cond_t got_work_cond;
-
-  pthread_rwlock_t known_actors_rwlock;
-  actor_array_t known_actors;
-} Scheduler;
-
-void scheduler_init(Scheduler *scheduler);
-void scheduler_start(Scheduler *scheduler, Actor *actor);
+void scheduler_init();
+void scheduler_start(Actor *actor);
 
 #endif // CORE_H
