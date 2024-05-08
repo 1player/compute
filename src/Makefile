@@ -1,12 +1,12 @@
 CC = gcc
 LD = gcc
 
-CFLAGS = -Wall -pipe -std=gnu18
-OFLAGS = -c -I/usr/include -I.
+CFLAGS = -std=gnu18 -MMD -MP -Wall -Wextra
 LFLAGS = $(CFLAGS) -L/usr/lib/
 
 SOURCES = $(wildcard *.c)
-OBJECTS = $(SOURCES:.c=.o)
+OBJECTS = $(patsubst %.c,%.o,$(SOURCES))
+DEPENDS = $(patsubst %.c,%.d,$(SOURCES))
 
 DEBUG = yes
 
@@ -19,13 +19,12 @@ all: dasc
 dasc: $(OBJECTS)
 	$(CC) $(OBJECTS) $(CFLAGS) -o dasc
 
-%.o: %.c
+clean:
+	rm -rf $(OBJECTS) $(DEPENDS) dasc
+
+%.o: %.c Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
-	rm -rf *.o dasc
+-include $(DEPENDS)
 
-rebuild: clean all
-
-.PHONY : clean
-.SILENT : clean
+.PHONY: all clean
