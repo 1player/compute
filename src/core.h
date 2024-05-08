@@ -31,15 +31,13 @@ bool mailbox_pop(Mailbox *mailbox, Message *out);
 
 typedef unsigned int PID;
 
-#define STATUS_IDLE 0      // Not running, and no messages in its mailbox
-#define STATUS_RUNNABLE 1  // Not running, but has pending messages
-#define STATUS_RUNNING 2   // Scheduled and currently running
-
 typedef void (*HandlerFunc)(void *, Message);
 
 typedef struct Actor {
-  PID pid; // set by the scheduler
-  atomic_int status;
+  PID pid;
+
+  atomic_bool is_active;
+  atomic_int pending_messages;
 
   HandlerFunc handler_func;
 
@@ -52,7 +50,7 @@ typedef struct Actor {
 } Actor;
 
 void actor_init(Actor *actor, HandlerFunc handler_func, void *private);
-bool actor_set_status(Actor *actor, int from, int to);
+bool actor_try_activating(Actor *actor);
 
 // Scheduler
 

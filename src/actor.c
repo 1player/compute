@@ -3,12 +3,14 @@
 #include "core.h"
 
 void actor_init(Actor *actor, HandlerFunc handler_func, void *private) {
-  actor->status = STATUS_IDLE;
+  actor->is_active = false;
+  actor->pending_messages = 0;
   actor->handler_func = handler_func;
   actor->private = private;
   mailbox_init(&actor->mailbox);
 }
 
-bool actor_set_status(Actor *actor, int from, int to) {
-  return atomic_compare_exchange_strong(&actor->status, &from, to);
+bool actor_try_activating(Actor *actor) {
+  bool expected_active = false;
+  return atomic_compare_exchange_strong(&actor->is_active, &expected_active, true);
 }

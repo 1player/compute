@@ -39,11 +39,11 @@ static Actor *find_actor_to_run() {
 
   for (int i = 0; i < global_scheduler.known_actors.length; i++) {
     Actor *actor = global_scheduler.known_actors.data[i];
-    if (actor->status != STATUS_RUNNABLE) {
+    if (actor->pending_messages < 1) {
       continue;
     }
 
-    if (actor_set_status(actor, STATUS_RUNNABLE, STATUS_RUNNING)) {
+    if (actor_try_activating(actor)) {
       actor_to_run = actor;
       break;
     }
@@ -74,18 +74,25 @@ static void *thread_main(void *arg) {
     current_actor = find_actor_to_run();
 
     if (current_actor) {
-      printf("Thread %d: Found an actor to run:\n", thread->id);
+      printf("Thread %d: Found actor %p to run.\n", thread->id, current_actor);
       Message msg;
 
       if (mailbox_pop(&current_actor->mailbox, &msg)) {
+        printf("Thread %d: Dispatching '%s' to %p:\n", thread->id, msg.name, current_actor);
+        current_actor->pending_messages--;
         current_actor->handler_func(current_actor->private, msg);
       }
-      assert(actor_set_status(current_actor, STATUS_RUNNING, STATUS_IDLE) == true);
+      printf("Thread %d: Done with %p.\n", thread->id, current_actor);
+
+      current_actor->is_active = false;
     } else {
-      printf("Thread %d: Found nothing to run. Going to sleep\n", thread->id);
+      printf("Thread %d: Going to sleep.\n", thread->id);
+
       wait_for_work();
     }
   }
+
+  return NULL;
 }
 
 
@@ -171,14 +178,7 @@ void scheduler_send(PID pid, Message message) {
   }
 
   mailbox_push(&actor->mailbox, message);
-
-  // TODO: this is not thread safe. The status field should be
-  // replaced with two boolean values: `has messages`, and `is
-  // running`.
-  if (!actor_set_status(actor, actor->status, STATUS_RUNNABLE)) {
-    printf("BUG\n");
-    exit(1);
-  }
+  actor->pending_messages++;
 
   notify_got_work();
 
