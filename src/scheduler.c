@@ -75,12 +75,11 @@ static void *thread_main(void *arg) {
 
     if (current_actor) {
       printf("Thread %d: Found an actor to run:\n", thread->id);
-      Message *msg = mailbox_pop(&current_actor->mailbox);
-      if (!msg) {
-        printf("BUG msg is NULL\n");
-        exit(1);
+      Message msg;
+
+      if (mailbox_pop(&current_actor->mailbox, &msg)) {
+        current_actor->handler_func(current_actor->private, msg);
       }
-      current_actor->handler_func(current_actor->private, msg);
       assert(actor_set_status(current_actor, STATUS_RUNNING, STATUS_IDLE) == true);
     } else {
       printf("Thread %d: Found nothing to run. Going to sleep\n", thread->id);
@@ -143,6 +142,9 @@ PID scheduler_start(Actor *actor) {
   array_push(&global_scheduler.known_actors, actor);
   UNLOCK_ACTORS;
 
+  Message init_message = { .name = "init" };
+  scheduler_send(actor_pid, init_message);
+
   return actor_pid;
 }
 
@@ -159,7 +161,7 @@ static Actor *lookup_pid(PID pid) {
 }
 
 
-void scheduler_send(PID pid, Message *message) {
+void scheduler_send(PID pid, Message message) {
   LOCK_ACTORS_READ;
 
   Actor *actor = lookup_pid(pid);

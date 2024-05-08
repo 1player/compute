@@ -4,12 +4,12 @@
 #include "core.h"
 
 typedef struct MailboxEntry {
-  Message *value;
+  Message value;
   struct MailboxEntry *next;
 } MailboxEntry;
 
 
-static MailboxEntry *alloc_entry(Message *message) {
+static MailboxEntry *alloc_entry(Message message) {
   MailboxEntry *entry = calloc(1, sizeof(MailboxEntry));
   entry->value = message;
   return entry;
@@ -19,7 +19,7 @@ void free_entry(MailboxEntry *entry) {
   free(entry);
 }
 
-void mailbox_push(Mailbox *mailbox, Message *message) {
+void mailbox_push(Mailbox *mailbox, Message message) {
   assert(pthread_mutex_lock(&mailbox->lock) == 0);
 
   if (mailbox->front) {
@@ -33,22 +33,21 @@ void mailbox_push(Mailbox *mailbox, Message *message) {
   assert(pthread_mutex_unlock(&mailbox->lock) == 0);
 }
 
-Message *mailbox_pop(Mailbox *mailbox) {
+bool mailbox_pop(Mailbox *mailbox, Message *out) {
   assert(pthread_mutex_lock(&mailbox->lock) == 0);
 
   if (!mailbox->front) {
-    return NULL;
+    return false;
   }
 
   MailboxEntry *old_front = mailbox->front;
-  Message *msg = old_front->value;
-
+  *out = old_front->value;
   mailbox->front = mailbox->front->next;
 
   assert(pthread_mutex_unlock(&mailbox->lock) == 0);
 
   free_entry(old_front);
-  return msg;
+  return true;
 }
 
 void mailbox_init(Mailbox *mailbox) {

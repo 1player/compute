@@ -24,8 +24,8 @@ typedef struct Mailbox {
 } Mailbox;
 
 void mailbox_init(Mailbox *mailbox);
-void mailbox_push(Mailbox *mailbox, Message *message);
-Message *mailbox_pop(Mailbox *mailbox);
+void mailbox_push(Mailbox *mailbox, Message message);
+bool mailbox_pop(Mailbox *mailbox, Message *out);
 
 // Actor
 
@@ -35,7 +35,7 @@ typedef unsigned int PID;
 #define STATUS_RUNNABLE 1  // Not running, but has pending messages
 #define STATUS_RUNNING 2   // Scheduled and currently running
 
-typedef void (*HandlerFunc)(void *, Message *);
+typedef void (*HandlerFunc)(void *, Message);
 
 typedef struct Actor {
   PID pid; // set by the scheduler
@@ -59,6 +59,6 @@ bool actor_set_status(Actor *actor, int from, int to);
 void scheduler_init();
 PID scheduler_start(Actor *actor);
 
-void scheduler_send(PID destination, Message *message);
+void scheduler_send(PID destination, Message message);
 
 #endif // CORE_H

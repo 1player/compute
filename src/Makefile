@@ -1,7 +1,8 @@
 CC = gcc
 LD = gcc
 
-CFLAGS = -std=gnu18 -MMD -MP -Wall -Wextra
+CFLAGS = -std=gnu18 -MMD -MP
+CFLAGS += -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter
 LFLAGS = $(CFLAGS) -L/usr/lib/
 
 SOURCES = $(wildcard *.c)
