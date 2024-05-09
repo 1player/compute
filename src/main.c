@@ -51,7 +51,8 @@ int main(int argc, char *argv[]) {
   actor_init(&actor2, (HandlerFunc)basic_actor_handler, &actor2_data);
   PID actor2_pid = scheduler_start(&actor2);
 
-  while(1) {
-    sleep(1000);
-  }
+  // Turn this main thread into another scheduler thread
+  scheduler_absorb_main_thread();
+
+  // unreachable
 }

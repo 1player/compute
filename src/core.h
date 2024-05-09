@@ -55,7 +55,7 @@ bool actor_acquire(Actor *actor);
 
 void scheduler_init();
 PID scheduler_start(Actor *actor);
-
+void scheduler_absorb_main_thread();
 void scheduler_send(PID destination, Message *message);
 
 #endif // CORE_H

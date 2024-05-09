@@ -97,15 +97,19 @@ void scheduler_init() {
   assert(pthread_cond_init(&global_scheduler.got_work_cond, NULL) == 0);
 
   // Run one thread per CPU core
-  const int NUM_THREADS = sysconf(_SC_NPROCESSORS_ONLN);
-  global_scheduler.threads = calloc(NUM_THREADS, sizeof(SchedulerThread));
+  global_scheduler.num_threads = sysconf(_SC_NPROCESSORS_ONLN);
+  global_scheduler.threads = calloc(global_scheduler.num_threads, sizeof(SchedulerThread));
 
-  for (int i = 0; i < NUM_THREADS; i++) {
+  for (int i = 0; i < global_scheduler.num_threads; i++) {
     SchedulerThread *thread = &global_scheduler.threads[i];
     thread->id = i;
-    assert(pthread_create(&thread->os_handle, &attr, &thread_main, (void *)thread) == 0);
 
-    global_scheduler.num_threads++;
+    // Start from thread #1, thread #0 will be jumped into from the main function.
+    if (i == 0) {
+      continue;
+    }
+
+    assert(pthread_create(&thread->os_handle, &attr, &thread_main, (void *)thread) == 0);
   }
 }
 
@@ -122,6 +126,14 @@ PID scheduler_start(Actor *actor) {
   scheduler_send(actor_pid, init_message);
 
   return actor_pid;
+}
+
+
+void scheduler_absorb_main_thread() {
+  SchedulerThread *main_thread = &global_scheduler.threads[0];
+  thread_main(main_thread);
+
+  // unreachable
 }
 
 static Actor *lookup_pid(PID pid) {
