@@ -75,10 +75,11 @@ static void *thread_main(void *arg) {
 
     if (current_actor) {
       printf("Thread %d: Found actor %p to run.\n", thread->id, current_actor);
-      Message msg;
 
-      if (mailbox_pop(&current_actor->mailbox, &msg)) {
-        printf("Thread %d: Dispatching '%s' to %p:\n", thread->id, msg.name, current_actor);
+      Message *msg = fifo_pop(&current_actor->mailbox);
+
+      if (msg) {
+        printf("Thread %d: Dispatching '%s' to %p:\n", thread->id, msg->name, current_actor);
         current_actor->pending_messages--;
         current_actor->handler_func(current_actor->private, msg);
       }
@@ -149,7 +150,8 @@ PID scheduler_start(Actor *actor) {
   array_push(&global_scheduler.known_actors, actor);
   UNLOCK_ACTORS;
 
-  Message init_message = { .name = "init" };
+  Message *init_message = malloc(sizeof(Message));
+  init_message->name = "init";
   scheduler_send(actor_pid, init_message);
 
   return actor_pid;
@@ -168,7 +170,7 @@ static Actor *lookup_pid(PID pid) {
 }
 
 
-void scheduler_send(PID pid, Message message) {
+void scheduler_send(PID pid, Message *message) {
   LOCK_ACTORS_READ;
 
   Actor *actor = lookup_pid(pid);
@@ -177,7 +179,7 @@ void scheduler_send(PID pid, Message message) {
     goto end;
   }
 
-  mailbox_push(&actor->mailbox, message);
+  fifo_push(&actor->mailbox, (void *)message);
   actor->pending_messages++;
 
   notify_got_work();

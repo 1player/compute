@@ -7,7 +7,7 @@ void actor_init(Actor *actor, HandlerFunc handler_func, void *private) {
   actor->pending_messages = 0;
   actor->handler_func = handler_func;
   actor->private = private;
-  mailbox_init(&actor->mailbox);
+  fifo_init(&actor->mailbox);
 }
 
 bool actor_try_activating(Actor *actor) {
