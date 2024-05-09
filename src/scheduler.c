@@ -26,33 +26,11 @@ typedef struct Scheduler {
 } Scheduler;
 
 Scheduler global_scheduler;
+FIFO global_runqueue;
 
 #define LOCK_ACTORS_READ assert(pthread_rwlock_rdlock(&global_scheduler.known_actors_rwlock) == 0)
 #define LOCK_ACTORS_WRITE assert(pthread_rwlock_wrlock(&global_scheduler.known_actors_rwlock) == 0)
 #define UNLOCK_ACTORS pthread_rwlock_unlock(&global_scheduler.known_actors_rwlock);
-
-
-static Actor *find_actor_to_run() {
-  Actor *actor_to_run = NULL;
-
-  LOCK_ACTORS_READ;
-
-  for (int i = 0; i < global_scheduler.known_actors.length; i++) {
-    Actor *actor = global_scheduler.known_actors.data[i];
-    if (actor->pending_messages < 1) {
-      continue;
-    }
-
-    if (actor_try_activating(actor)) {
-      actor_to_run = actor;
-      break;
-    }
-  }
-
-  UNLOCK_ACTORS;
-
-  return actor_to_run;
-}
 
 static void notify_got_work() {
   pthread_mutex_lock(&global_scheduler.got_work_mutex);
@@ -66,29 +44,34 @@ static void wait_for_work() {
   pthread_mutex_unlock(&global_scheduler.got_work_mutex);
 }
 
+static void thread_run_actor(SchedulerThread *thread, Actor *actor) {
+  Message *msg;
+
+  printf("Thread %d: Found actor %p to run.\n", thread->id, actor);
+
+  while ((msg = fifo_pop(&actor->mailbox))) {
+    printf("Thread %d: Dispatching '%s' to %p:\n", thread->id, msg->name, actor);
+    actor->handler_func(actor->private, msg);
+  }
+
+  printf("Thread %d: Done with %p.\n", thread->id, actor);
+  actor->is_active = false;
+}
+
 static void *thread_main(void *arg) {
   SchedulerThread *thread = (SchedulerThread *)arg;
   Actor *current_actor;
 
   while (1) {
-    current_actor = find_actor_to_run();
+    // Pick actor from the global runqueue, and try to acquire it
+    do {
+      current_actor = fifo_pop(&global_runqueue);
+    } while (current_actor && !actor_acquire(current_actor));
 
     if (current_actor) {
-      printf("Thread %d: Found actor %p to run.\n", thread->id, current_actor);
-
-      Message *msg = fifo_pop(&current_actor->mailbox);
-
-      if (msg) {
-        printf("Thread %d: Dispatching '%s' to %p:\n", thread->id, msg->name, current_actor);
-        current_actor->pending_messages--;
-        current_actor->handler_func(current_actor->private, msg);
-      }
-      printf("Thread %d: Done with %p.\n", thread->id, current_actor);
-
-      current_actor->is_active = false;
+      thread_run_actor(thread, current_actor);
     } else {
       printf("Thread %d: Going to sleep.\n", thread->id);
-
       wait_for_work();
     }
   }
@@ -104,39 +87,23 @@ void scheduler_init() {
     exit(1);
   }
 
+  fifo_init(&global_runqueue);
+
+  // Init the global scheduler
   global_scheduler.next_actor_id = 1;
-
   array_init(&global_scheduler.known_actors);
-
-  if (pthread_rwlock_init(&global_scheduler.known_actors_rwlock, NULL) != 0) {
-    perror("pthread_rwlock_init");
-    exit(1);
-  }
+  assert(pthread_rwlock_init(&global_scheduler.known_actors_rwlock, NULL) == 0);
+  assert(pthread_mutex_init(&global_scheduler.got_work_mutex, NULL) == 0);
+  assert(pthread_cond_init(&global_scheduler.got_work_cond, NULL) == 0);
 
   // Run one thread per CPU core
   const int NUM_THREADS = sysconf(_SC_NPROCESSORS_ONLN);
-
   global_scheduler.threads = calloc(NUM_THREADS, sizeof(SchedulerThread));
-  assert(global_scheduler.threads != NULL);
-
-  if (pthread_mutex_init(&global_scheduler.got_work_mutex, NULL) != 0) {
-    perror("pthread_mutex_init");
-    exit(1);
-  }
-
-  if (pthread_cond_init(&global_scheduler.got_work_cond, NULL) != 0) {
-    perror("pthread_cond_init");
-    exit(1);
-  }
 
   for (int i = 0; i < NUM_THREADS; i++) {
     SchedulerThread *thread = &global_scheduler.threads[i];
     thread->id = i;
-
-    if (pthread_create(&thread->os_handle, &attr, &thread_main, (void *)thread) != 0) {
-      perror("pthread_create");
-      exit(1);
-    }
+    assert(pthread_create(&thread->os_handle, &attr, &thread_main, (void *)thread) == 0);
 
     global_scheduler.num_threads++;
   }
@@ -157,33 +124,40 @@ PID scheduler_start(Actor *actor) {
   return actor_pid;
 }
 
-// Assumes actors are locked
 static Actor *lookup_pid(PID pid) {
+  Actor *found_actor = NULL;
+
+  LOCK_ACTORS_READ;
+  
   for (int i = 0; i < global_scheduler.known_actors.length; i++) {
     Actor *actor = global_scheduler.known_actors.data[i];
 
-    if (actor->pid == pid)
-      return actor;
+    if (actor->pid == pid) {
+      found_actor = actor;
+      break;
+    }
   }
 
-  return NULL;
+  UNLOCK_ACTORS;
+  return found_actor;
 }
 
+static void add_actor_to_runqueue(Actor *actor) {
+  fifo_push(&global_runqueue, (void *)actor);
+  notify_got_work();
+}
 
 void scheduler_send(PID pid, Message *message) {
-  LOCK_ACTORS_READ;
-
   Actor *actor = lookup_pid(pid);
   if (!actor) {
     printf("Trying to send message to unknown actor.\n");
-    goto end;
+    return;
   }
 
   fifo_push(&actor->mailbox, (void *)message);
-  actor->pending_messages++;
 
-  notify_got_work();
-
- end:
-  UNLOCK_ACTORS;
+  // TODO: possible race condition when actor goes inactive
+  if (!actor->is_active) {
+    add_actor_to_runqueue(actor);
+  }
 }

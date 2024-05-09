@@ -34,19 +34,22 @@ void fifo_push(FIFO *fifo, void *data) {
 }
 
 void *fifo_pop(FIFO *fifo) {
+  void *data = NULL;
+
   assert(pthread_mutex_lock(&fifo->lock) == 0);
 
   if (!fifo->front) {
-    return NULL;
+    goto end;
   }
 
   FIFOEntry *old_front = fifo->front;
-  void *data = old_front->data;
-  fifo->front = fifo->front->next;
-
-  assert(pthread_mutex_unlock(&fifo->lock) == 0);
+  data = old_front->data;
+  fifo->front = old_front->next;
 
   free_entry(old_front);
+
+ end:
+  assert(pthread_mutex_unlock(&fifo->lock) == 0);
   return data;
 }
 

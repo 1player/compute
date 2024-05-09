@@ -37,7 +37,6 @@ typedef struct Actor {
   PID pid;
 
   atomic_bool is_active;
-  atomic_int pending_messages;
 
   HandlerFunc handler_func;
 
@@ -50,7 +49,7 @@ typedef struct Actor {
 } Actor;
 
 void actor_init(Actor *actor, HandlerFunc handler_func, void *private);
-bool actor_try_activating(Actor *actor);
+bool actor_acquire(Actor *actor);
 
 // Scheduler
 
