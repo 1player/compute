@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <threads.h>
 
 #include "core.h"
 
@@ -27,6 +28,7 @@ typedef struct Scheduler {
 
 Scheduler global_scheduler;
 FIFO global_runqueue;
+thread_local Actor *local_current_actor = NULL;
 
 #define LOCK_ACTORS_READ assert(pthread_rwlock_rdlock(&global_scheduler.known_actors_rwlock) == 0)
 #define LOCK_ACTORS_WRITE assert(pthread_rwlock_wrlock(&global_scheduler.known_actors_rwlock) == 0)
@@ -47,7 +49,8 @@ static void wait_for_work() {
 static void thread_run_actor(SchedulerThread *thread, Actor *actor) {
   Message *msg;
 
-  printf("Thread %d: Found actor %p to run.\n", thread->id, actor);
+  // Set thread local pointing to current actor
+  local_current_actor = actor;
 
   while ((msg = fifo_pop(&actor->mailbox))) {
     printf("Thread %d: Dispatching '%s' to %p:\n", thread->id, msg->name, actor);
@@ -60,16 +63,16 @@ static void thread_run_actor(SchedulerThread *thread, Actor *actor) {
 
 static void *thread_main(void *arg) {
   SchedulerThread *thread = (SchedulerThread *)arg;
-  Actor *current_actor;
+  Actor *actor;
 
   while (1) {
     // Pick actor from the global runqueue, and try to acquire it
     do {
-      current_actor = fifo_pop(&global_runqueue);
-    } while (current_actor && !actor_acquire(current_actor));
+      actor = fifo_pop(&global_runqueue);
+    } while (actor && !actor_acquire(actor));
 
-    if (current_actor) {
-      thread_run_actor(thread, current_actor);
+    if (actor) {
+      thread_run_actor(thread, actor);
     } else {
       printf("Thread %d: Going to sleep.\n", thread->id);
       wait_for_work();
@@ -123,7 +126,7 @@ PID scheduler_start(Actor *actor) {
 
   Message *init_message = malloc(sizeof(Message));
   init_message->name = "init";
-  scheduler_send(actor_pid, init_message);
+  scheduler_cast(actor_pid, init_message);
 
   return actor_pid;
 }
@@ -134,6 +137,14 @@ void scheduler_absorb_main_thread() {
   thread_main(main_thread);
 
   // unreachable
+}
+
+PID scheduler_self() {
+  if (local_current_actor) {
+    return local_current_actor->pid;
+  }
+
+  return -1;
 }
 
 static Actor *lookup_pid(PID pid) {
@@ -159,13 +170,14 @@ static void add_actor_to_runqueue(Actor *actor) {
   notify_got_work();
 }
 
-void scheduler_send(PID pid, Message *message) {
+void scheduler_cast(PID pid, Message *message) {
   Actor *actor = lookup_pid(pid);
   if (!actor) {
     printf("Trying to send message to unknown actor.\n");
     return;
   }
 
+  message->sender = scheduler_self();
   fifo_push(&actor->mailbox, (void *)message);
 
   // TODO: possible race condition when actor goes inactive

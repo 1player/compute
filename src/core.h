@@ -7,6 +7,8 @@
 
 #include "array.h"
 
+typedef unsigned int PID;
+
 // FIFO
 
 typedef struct FIFOEntry FIFOEntry;
@@ -25,11 +27,10 @@ void *fifo_pop(FIFO *mailbox);
 
 typedef struct Message {
   char *name;
+  PID sender;
 } Message;
 
 // Actor
-
-typedef unsigned int PID;
 
 typedef void (*HandlerFunc)(void *, Message *);
 
@@ -56,6 +57,8 @@ bool actor_acquire(Actor *actor);
 void scheduler_init();
 PID scheduler_start(Actor *actor);
 void scheduler_absorb_main_thread();
-void scheduler_send(PID destination, Message *message);
+
+void scheduler_cast(PID destination, Message *message);
+PID scheduler_self();
 
 #endif // CORE_H

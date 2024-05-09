@@ -9,28 +9,29 @@ struct basic_actor {
 
 static void basic_actor_init(struct basic_actor *self) {
   if (self->partner) {
-    printf("Pinging partner...\n");
+    printf("PID %d: Pinging partner...\n", scheduler_self());
 
     Message *msg = malloc(sizeof(Message));
     msg->name = "ping";
-    scheduler_send(self->partner, msg);
+    scheduler_cast(self->partner, msg);
   }
 }
 
-static void basic_actor_ping(struct basic_actor *self) {
+static void basic_actor_ping(struct basic_actor *self, PID sender) {
   if (self->partner) {
-    printf("Didn't expect a ping ourselves...\n");
+    printf("PID %d: Didn't expect a ping ourselves...\n", scheduler_self());
   } else {
-    printf("Got a ping!\n");
+    printf("PID %d: Got a ping from PID %d!\n", scheduler_self(), sender);
   }
 }
   
 
 static void basic_actor_handler(struct basic_actor *self, Message *message) {
   if (strcmp(message->name, "init") == 0) {
+    printf("PID %d initialized.\n", scheduler_self());
     basic_actor_init(self);
   } else if (strcmp(message->name, "ping") == 0) {
-    basic_actor_ping(self);
+    basic_actor_ping(self, message->sender);
   } else {
     printf("Got unknown message.\n");
   }
