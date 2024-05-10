@@ -34,12 +34,20 @@ typedef struct Message {
 
 typedef void (*HandlerFunc)(void *, Message *);
 
+typedef struct HandlerEntry {
+  char *name;
+  HandlerFunc handler;
+} HandlerEntry;
+
+typedef struct HandlerTable {
+  int count;
+  HandlerEntry entries[];
+} HandlerTable;
+
 typedef struct Actor {
   PID pid;
-
   atomic_bool is_active;
-
-  HandlerFunc handler_func;
+  HandlerTable *handlers;
 
   // Concurrent-safe, protected by its own lock
   FIFO mailbox;
@@ -49,13 +57,13 @@ typedef struct Actor {
   void *private;
 } Actor;
 
-void actor_init(Actor *actor, HandlerFunc handler_func, void *private);
+Actor *actor_new();
 bool actor_acquire(Actor *actor);
 
 // Scheduler
 
 void scheduler_init();
-PID scheduler_start(Actor *actor);
+PID scheduler_start(void *private, HandlerTable *handlers);
 void scheduler_absorb_main_thread();
 
 void scheduler_cast(PID destination, Message *message);

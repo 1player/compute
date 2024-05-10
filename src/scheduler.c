@@ -17,7 +17,7 @@ typedef struct Scheduler {
   int num_threads;
   SchedulerThread *threads;
 
-  int next_actor_id;
+  atomic_int next_actor_id;
 
   pthread_mutex_t got_work_mutex;
   pthread_cond_t got_work_cond;
@@ -53,11 +53,19 @@ static void thread_run_actor(SchedulerThread *thread, Actor *actor) {
   local_current_actor = actor;
 
   while ((msg = fifo_pop(&actor->mailbox))) {
-    printf("Thread %d: Dispatching '%s' to %p:\n", thread->id, msg->name, actor);
-    actor->handler_func(actor->private, msg);
+    printf("Thread %d: Dispatching '%s' to PID %d:\n", thread->id, msg->name, actor->pid);
+
+    for (int i = 0; i < actor->handlers->count; i++) {
+      HandlerEntry *entry = &actor->handlers->entries[i];
+      if (strcmp(entry->name, msg->name) != 0) {
+        continue;
+      }
+
+      entry->handler(actor->private, msg);
+    }
   }
 
-  printf("Thread %d: Done with %p.\n", thread->id, actor);
+  printf("Thread %d: Done with PID %d.\n", thread->id, actor->pid);
   actor->is_active = false;
 }
 
@@ -74,7 +82,7 @@ static void *thread_main(void *arg) {
     if (actor) {
       thread_run_actor(thread, actor);
     } else {
-      printf("Thread %d: Going to sleep.\n", thread->id);
+      /* printf("Thread %d: Going to sleep.\n", thread->id); */
       wait_for_work();
     }
   }
@@ -116,9 +124,15 @@ void scheduler_init() {
   }
 }
 
-PID scheduler_start(Actor *actor) {
-  PID actor_pid = global_scheduler.next_actor_id++;
-  actor->pid = actor_pid;
+PID next_pid() {
+  return global_scheduler.next_actor_id++;
+}
+
+PID scheduler_start(void *private, HandlerTable *handlers) {
+  Actor *actor = actor_new();
+  actor->private = private;
+  actor->handlers = handlers;
+  actor->pid = next_pid();
 
   LOCK_ACTORS_WRITE;
   array_push(&global_scheduler.known_actors, actor);
@@ -126,9 +140,9 @@ PID scheduler_start(Actor *actor) {
 
   Message *init_message = malloc(sizeof(Message));
   init_message->name = "init";
-  scheduler_cast(actor_pid, init_message);
+  scheduler_cast(actor->pid, init_message);
 
-  return actor_pid;
+  return actor->pid;
 }
 
 

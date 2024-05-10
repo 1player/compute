@@ -2,11 +2,12 @@
 
 #include "core.h"
 
-void actor_init(Actor *actor, HandlerFunc handler_func, void *private) {
+Actor *actor_new() {
+  Actor *actor = malloc(sizeof(Actor));
   actor->is_active = false;
-  actor->handler_func = handler_func;
-  actor->private = private;
   fifo_init(&actor->mailbox);
+
+  return actor;
 }
 
 // Atomically activate an actor. Returns true if operation succeeds.

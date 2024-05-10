@@ -7,7 +7,7 @@ struct basic_actor {
   PID partner;
 };
 
-static void basic_actor_init(struct basic_actor *self) {
+static void basic_actor_init(struct basic_actor *self, Message *msg) {
   if (self->partner) {
     printf("PID %d: Pinging partner...\n", scheduler_self());
 
@@ -17,40 +17,30 @@ static void basic_actor_init(struct basic_actor *self) {
   }
 }
 
-static void basic_actor_ping(struct basic_actor *self, PID sender) {
+static void basic_actor_ping(struct basic_actor *self, Message *msg) {
   if (self->partner) {
     printf("PID %d: Didn't expect a ping ourselves...\n", scheduler_self());
   } else {
-    printf("PID %d: Got a ping from PID %d!\n", scheduler_self(), sender);
+    printf("PID %d: Got a ping from PID %d!\n", scheduler_self(), msg->sender);
   }
 }
-  
 
-static void basic_actor_handler(struct basic_actor *self, Message *message) {
-  if (strcmp(message->name, "init") == 0) {
-    printf("PID %d initialized.\n", scheduler_self());
-    basic_actor_init(self);
-  } else if (strcmp(message->name, "ping") == 0) {
-    basic_actor_ping(self, message->sender);
-  } else {
-    printf("Got unknown message.\n");
+HandlerTable basic_actor_handlers = {
+  .count = 2,
+  .entries = {
+    { .name = "init", .handler = (HandlerFunc)basic_actor_init },
+    { .name = "ping", .handler = (HandlerFunc)basic_actor_ping },
   }
-
-  free(message);
-}
+};
 
 int main(int argc, char *argv[]) {
   scheduler_init();
 
-  Actor actor1;
   struct basic_actor actor1_data = { 0 };
-  actor_init(&actor1, (HandlerFunc)basic_actor_handler, &actor1_data);
-  PID actor1_pid = scheduler_start(&actor1);
+  PID actor1_pid = scheduler_start(&actor1_data, &basic_actor_handlers);
 
-  Actor actor2;
   struct basic_actor actor2_data = { .partner = actor1_pid };
-  actor_init(&actor2, (HandlerFunc)basic_actor_handler, &actor2_data);
-  PID actor2_pid = scheduler_start(&actor2);
+  PID actor2_pid = scheduler_start(&actor2_data, &basic_actor_handlers);
 
   // Turn this main thread into another scheduler thread
   scheduler_absorb_main_thread();
