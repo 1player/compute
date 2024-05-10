@@ -1,31 +1,19 @@
-CC = gcc
-LD = gcc
+MODULES = lib.a
 
-CFLAGS = -std=gnu18 -MMD -MP
-CFLAGS += -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter
-LFLAGS = $(CFLAGS) -L/usr/lib/
+include Makefile.rules
 
-SOURCES = $(wildcard *.c)
-OBJECTS = $(patsubst %.c,%.o,$(SOURCES))
-DEPENDS = $(patsubst %.c,%.d,$(SOURCES))
+all: $(MODULES) das
 
-DEBUG = yes
+lib.a:
+	$(MAKE) -C lib
 
-ifeq ($(DEBUG), yes)
-	CFLAGS += -g
-endif
-
-all: dasc
-
-dasc: $(OBJECTS)
-	$(CC) $(OBJECTS) $(CFLAGS) -o dasc
+das: $(OBJECTS)
+	$(CC) $(OBJECTS) $(MODULES) $(CFLAGS) -o das
 
 clean:
-	rm -rf $(OBJECTS) $(DEPENDS) dasc
-
-%.o: %.c Makefile
-	$(CC) $(CFLAGS) -c $< -o $@
-
--include $(DEPENDS)
+	$(MAKE) -C lib clean
+	rm -rf $(MODULES) $(OBJECTS) $(DEPENDS) das
 
 .PHONY: all clean
+
+-include $(DEPENDS)

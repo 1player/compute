@@ -1,3 +1,4 @@
-src/dasc
-src/*.o
-src/*.d
+src/das
+**/*.o
+**/*.d
+**/*.a

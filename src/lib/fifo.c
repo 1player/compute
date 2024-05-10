@@ -1,7 +1,8 @@
 #include <assert.h>
 #include <stdio.h>
+#include <pthread.h>
 
-#include "core.h"
+#include "lib.h"
 
 typedef struct FIFOEntry {
   void *data;
