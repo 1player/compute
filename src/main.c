@@ -3,44 +3,60 @@
 
 #include "scheduler/scheduler.h"
 
-struct basic_actor {
-  PID partner;
+struct sieve {
+  int n;
+  PID child;
 };
 
-static void basic_actor_init(struct basic_actor *self, Message *msg) {
-  if (self->partner) {
-    printf("PID %d: Pinging partner...\n", scheduler_self());
+HandlerTable sieve_handlers;
 
-    Message *msg = malloc(sizeof(Message));
-    msg->name = "ping";
-    scheduler_cast(self->partner, msg);
-  }
+static void sieve_init(struct sieve *self, const Message *msg) {
+  printf("%d\n", self->n);
 }
 
-static void basic_actor_ping(struct basic_actor *self, Message *msg) {
-  if (self->partner) {
-    printf("PID %d: Didn't expect a ping ourselves...\n", scheduler_self());
-  } else {
-    printf("PID %d: Got a ping from PID %d!\n", scheduler_self(), msg->sender);
+static void sieve_filter(struct sieve *self, const Message *msg) {
+  int number = (int)msg->data;
+
+  if ((number % self->n) == 0) {
+    // Filtered by ourselves
+    return;
   }
+
+  // Not our multiple. Forward to our child.
+  if (self->child) {
+    Message *new_msg = malloc(sizeof(Message));
+    new_msg->name = "filter";
+    new_msg->data = (void *)number;
+    scheduler_cast(self->child, new_msg);
+    return;
+  }
+
+  // Start a new child if we have none
+  struct sieve *child_sieve = calloc(1, sizeof(struct sieve));
+  child_sieve->n = number;
+  self->child = scheduler_start(child_sieve, &sieve_handlers);
 }
 
-HandlerTable basic_actor_handlers = {
+HandlerTable sieve_handlers = {
   .count = 2,
   .entries = {
-    { .name = "init", .handler = (HandlerFunc)basic_actor_init },
-    { .name = "ping", .handler = (HandlerFunc)basic_actor_ping },
+    { .name = "init", .handler = (HandlerFunc)sieve_init },
+    { .name = "filter", .handler = (HandlerFunc)sieve_filter },
   }
 };
 
 int main(int argc, char *argv[]) {
   scheduler_init();
 
-  struct basic_actor actor1_data = { 0 };
-  PID actor1_pid = scheduler_start(&actor1_data, &basic_actor_handlers);
+  struct sieve two_sieve = { .n = 2, .child = 0 };
+  PID two_sieve_pid = scheduler_start(&two_sieve, &sieve_handlers);
 
-  struct basic_actor actor2_data = { .partner = actor1_pid };
-  PID actor2_pid = scheduler_start(&actor2_data, &basic_actor_handlers);
+  for (int i = 3; i < 10000; i++) {
+    Message *msg = malloc(sizeof(Message));
+    msg->name = "filter";
+    msg->data = (void *)i;
+    scheduler_cast(two_sieve_pid, msg);
+  }
 
   // Turn this main thread into another scheduler thread
   scheduler_absorb_main_thread();

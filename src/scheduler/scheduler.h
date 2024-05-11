@@ -14,11 +14,12 @@ typedef unsigned int PID;
 typedef struct Message {
   char *name;
   PID sender;
+  void *data;
 } Message;
 
 // Actor
 
-typedef void (*HandlerFunc)(void *, Message *);
+typedef void (*HandlerFunc)(void *, const Message *);
 
 typedef struct HandlerEntry {
   char *name;

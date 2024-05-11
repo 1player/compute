@@ -53,7 +53,7 @@ static void thread_run_actor(SchedulerThread *thread, Actor *actor) {
   local_current_actor = actor;
 
   while ((msg = fifo_pop(&actor->mailbox))) {
-    printf("Thread %d: Dispatching '%s' to PID %d:\n", thread->id, msg->name, actor->pid);
+    /* printf("Thread %d: Dispatching '%s' to PID %d:\n", thread->id, msg->name, actor->pid); */
 
     for (int i = 0; i < actor->handlers->count; i++) {
       HandlerEntry *entry = &actor->handlers->entries[i];
@@ -62,10 +62,12 @@ static void thread_run_actor(SchedulerThread *thread, Actor *actor) {
       }
 
       entry->handler(actor->private, msg);
+      free(msg);
+      break;
     }
   }
 
-  printf("Thread %d: Done with PID %d.\n", thread->id, actor->pid);
+  /* printf("Thread %d: Done with PID %d.\n", thread->id, actor->pid); */
   actor->is_active = false;
 }
 
