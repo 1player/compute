@@ -1,4 +1,4 @@
-MODULES := lib
+MODULES := lib scheduler
 
 CC := gcc
 CFLAGS := -std=gnu17 -MMD -MP -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -I $(CURDIR)

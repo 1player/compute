@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "core.h"
+#include "scheduler/scheduler.h"
 
 struct basic_actor {
   PID partner;

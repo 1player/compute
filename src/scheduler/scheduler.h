@@ -1,5 +1,5 @@
-#ifndef CORE_H
-#define CORE_H
+#ifndef SCHEDULER_H
+#define SCHEDULER_H
 
 #include <stdatomic.h>
 #include <stdbool.h>

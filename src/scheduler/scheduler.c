@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <threads.h>
 
-#include "core.h"
+#include "scheduler.h"
 
 typedef array_t(Actor *) actor_array_t;
 
