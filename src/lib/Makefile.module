@@ -1,0 +1,2 @@
+SOURCES += $(wildcard lib/*.c)
+

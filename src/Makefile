@@ -1,18 +1,22 @@
-MODULES = lib.a
+MODULES := lib
 
-include Makefile.rules
+CC := gcc
+CFLAGS := -std=gnu17 -MMD -MP -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -I $(CURDIR)
 
-all: $(MODULES) das
+SOURCES := $(wildcard *.c)
+include $(patsubst %,%/Makefile.module,$(MODULES))
 
-lib.a:
-	$(MAKE) -C lib
+OBJECTS := $(patsubst %.c,%.o,$(SOURCES))
+DEPENDS := $(patsubst %.c,%.d,$(SOURCES))
 
 das: $(OBJECTS)
-	$(CC) $(OBJECTS) $(MODULES) $(CFLAGS) -o das
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS)
 
 clean:
-	$(MAKE) -C lib clean
-	rm -rf $(MODULES) $(OBJECTS) $(DEPENDS) das
+	rm -rf $(OBJECTS) $(DEPENDS) das
+
+%.o: %.c Makefile
+	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: all clean
 
