@@ -1,19 +1,16 @@
-MODULES := lib scheduler
-
 CC := gcc
-CFLAGS := -std=gnu17 -MMD -MP -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -I $(CURDIR)
+CFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter
 
 SOURCES := $(wildcard *.c)
-include $(patsubst %,%/Makefile.module,$(MODULES))
 
 OBJECTS := $(patsubst %.c,%.o,$(SOURCES))
 DEPENDS := $(patsubst %.c,%.d,$(SOURCES))
 
-das: $(OBJECTS)
+das.object: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $(OBJECTS)
 
 clean:
-	rm -rf $(OBJECTS) $(DEPENDS) das
+	rm -rf $(OBJECTS) $(DEPENDS) das.object
 
 %.o: %.c Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
