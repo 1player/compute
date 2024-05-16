@@ -1,0 +1,33 @@
+actor Sieve {
+  prime: Number
+  child: actor Sieve?
+
+  new(n: Number) {
+    prime = n
+    print(n)
+  }
+
+  on filter(n: Number) {
+    if n % 2 == 0 {
+      return
+    }
+
+    if child {
+      child->filter(n)
+    } else {
+      child = spawn Sieve(n)
+    }
+  }
+}
+
+actor Main {
+  root: actor Sieve
+
+  new() {
+    root = spawn Sieve(2)
+    
+    for i in 3..10000 {
+      root->filter(i)
+    }
+  }
+}
