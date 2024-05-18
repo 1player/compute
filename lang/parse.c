@@ -69,20 +69,46 @@ static char *token_explain(token_t *tok) {
   return e;
 }
 
+expr_t *parse_expression(parser_t *parser);
+
+expr_t *parse_subexpression(parser_t *parser) {
+  if (expect_and_advance(parser, '(') != 0) {
+    return NULL;
+  }
+  expr_t *expr = parse_expression(parser);
+  if (!expr) {
+    return NULL;
+  }
+
+  if (expect_and_advance(parser, ')') != 0) {
+    return NULL;
+  }
+
+  return expr;
+}
+
 expr_t *parse_expression(parser_t *parser) {
   expr_t *left = NULL;
 
   enum token_type tok = peek(parser);
-  switch (tok) {
+  switch ((int)tok) {
+  case '(':
+    left = parse_subexpression(parser);
+    break;
+
   case TOKEN_NUMBER:
     left = new_expr(EXPR_LITERAL);
     left->literal.type = LITERAL_NUMBER;
     left->literal.value_number = parser->cur_token.value_number;
+
+    advance(parser);
     break;
 
   case TOKEN_ID:
     left = new_expr(EXPR_IDENTIFIER);
     left->identifier.name = parser->cur_token.value_id;
+
+    advance(parser);
     break;
 
   default:
@@ -92,8 +118,6 @@ expr_t *parse_expression(parser_t *parser) {
     
     return NULL;
   }
-
-  advance(parser);
 
   expr_t *expr = NULL, *right;
   tok = peek(parser);
