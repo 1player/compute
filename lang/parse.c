@@ -89,6 +89,7 @@ expr_t *parse_subexpression(parser_t *parser) {
 
 void synchronize(parser_t *parser) {
   // TODO
+  (void)parser;
 }
 
 void end_of_expression(parser_t *parser) {

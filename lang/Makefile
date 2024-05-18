@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter
+CFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra
 
 SOURCES := $(wildcard *.c)
 

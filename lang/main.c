@@ -2,6 +2,9 @@
 #include "common.h"
 
 int main(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
+
   char *s = "(1 + 2) * 3 - a\n1 +";
 
   parser_t parser;

@@ -1,7 +1,7 @@
 MODULES := lib scheduler
 
 CC := gcc
-CFLAGS := -std=gnu17 -MMD -MP -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -I $(CURDIR)
+CFLAGS := -std=gnu17 -MMD -MP -Wall -Wextra -I $(CURDIR)
 
 SOURCES := $(wildcard *.c)
 include $(patsubst %,%/Makefile.module,$(MODULES))
