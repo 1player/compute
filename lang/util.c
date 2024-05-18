@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include "common.h"
+#include "lang.h"
 
 void panic(char *msg, ...) {
   va_list args;

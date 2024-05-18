@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "common.h"
+#include "lang.h"
 
 static void emit(char *s, ...) {
   va_list args;

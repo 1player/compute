@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "common.h"
+#include "lang.h"
 
 int main(int argc, char **argv) {
   (void)argc;

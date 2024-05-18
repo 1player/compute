@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "common.h"
+#include "lang.h"
 
 static void lexer_error(lexer_t *lexer, char *msg, ...) {
   va_list args;

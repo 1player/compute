@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 
-#include "common.h"
+#include "lang.h"
 
 static void parser_error(parser_t *parser, char *msg, ...) {
   va_list args;

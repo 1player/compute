@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "common.h"
+#include "lang.h"
 
 void array_init(array_t *ary) {
   ary->elements = NULL;
