@@ -7,18 +7,14 @@
 
 static void lexer_error(lexer_t *lexer, char *msg, ...) {
   va_list args;
-
-  fprintf(stderr, "Lexer error at line %d: ", lexer->line);
-
   va_start(args, msg);
-  vfprintf(stderr, msg, args);
+  error(lexer->file, lexer->line, msg, args);
   va_end(args);
-
-  fputc('\n', stderr);
 }
 
-int lexer_create(lexer_t *lexer, char *input) {
+int lexer_create(lexer_t *lexer, char *file, char *input) {
   lexer->ptr = input;
+  lexer->file = file;
   lexer->line = 1;
 
   return 0;

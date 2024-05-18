@@ -3,17 +3,13 @@
 
 #include "common.h"
 
-static void parser_error(parser_t *parser, char *format, ...) {
-  char *msg;
-
+static void parser_error(parser_t *parser, char *msg, ...) {
   va_list args;
-  va_start(args, format);
-
-  vasprintf(&msg, format, args);
-  array_append(&parser->errors, msg);
-
+  va_start(args, msg);
+  error(parser->lexer.file, parser->lexer.line, msg, args);
   va_end(args);
 
+  parser->had_errors = true;
 }
 
 static enum token_type peek(parser_t *parser) {
@@ -187,14 +183,13 @@ toplevel_t *parser_parse(parser_t *parser) {
   return top;
 }
 
-int parser_create(parser_t *parser, char *filename, char *input) {
-  if (lexer_create(&parser->lexer, input)) {
+int parser_create(parser_t *parser, char *file, char *input) {
+  if (lexer_create(&parser->lexer, file, input)) {
     return 1;
   }
 
   parser->cur_token.type = -1;
   parser->prev_token.type = -1;
-  array_init(&parser->errors);
 
   advance(parser);
 

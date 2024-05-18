@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct {
   void **elements;
@@ -36,10 +37,11 @@ typedef struct token {
 
 typedef struct lexer {
   char *ptr;
+  char *file;
   unsigned int line;
 } lexer_t;
 
-int lexer_create(lexer_t *lexer, char *input);
+int lexer_create(lexer_t *lexer, char *file, char *input);
 int lexer_next(lexer_t *lexer, token_t *token);
 
 //
@@ -48,7 +50,7 @@ typedef struct {
   lexer_t lexer;
   token_t cur_token;
   token_t prev_token;
-  array_t errors;
+  bool had_errors;
 } parser_t;
 
 typedef struct toplevel_t {
@@ -101,5 +103,6 @@ void expr_dump(expr_t *expr);
 //
 
 void panic(char *msg, ...);
+void error(char *file, int line, char *msg, va_list args);
 
 #endif

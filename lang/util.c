@@ -17,3 +17,9 @@ void panic(char *msg, ...) {
 
   exit(1);
 }
+
+void error(char *file, int line, char *msg, va_list args) {
+  fprintf(stderr, "%s:%d: ", file, line);
+  vfprintf(stderr, msg, args);
+  fputc('\n', stderr);
+}
