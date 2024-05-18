@@ -40,6 +40,35 @@ static expr_t *new_expr(enum expr_type type) {
   return expr;
 }
 
+static char *token_explain(token_t *tok) {
+  char *e = NULL;
+  
+  if ((int)tok->type < 256) {
+    asprintf(&e, "character '%c'", (unsigned char)tok->type);
+    return e;
+  }
+
+  switch (tok->type) {
+  case TOKEN_EOF:
+    asprintf(&e, "EOF");
+    break;
+
+  case TOKEN_ID:
+    asprintf(&e, "identifier '%s'", tok->value_id);
+    break;
+
+  case TOKEN_STRING:
+    asprintf(&e, "string '%s'", tok->value_string);
+    break;
+
+  case TOKEN_NUMBER:
+    asprintf(&e, "number '%d'", tok->value_number);
+    break;
+  }
+
+  return e;
+}
+
 expr_t *parse_expression(parser_t *parser) {
   expr_t *left = NULL;
 
@@ -57,7 +86,10 @@ expr_t *parse_expression(parser_t *parser) {
     break;
 
   default:
-    parser_error(parser, "Unexpected token %d while parsing expression", tok);
+    char *e = token_explain(&parser->cur_token);
+    parser_error(parser, "Unexpected %s while parsing expression", e);
+    free(e);
+    
     return NULL;
   }
 
