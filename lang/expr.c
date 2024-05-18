@@ -48,11 +48,11 @@ static void dump(int indent, expr_t *expr) {
     emit("Identifier(%s)", expr->identifier.name);
     break;
 
-  case EXPR_BINARY_OP:
-    emit("BinaryOp {");
-    ln(indent + 1); emit("left: "); dump(indent + 1, expr->binary_op.left);
-    ln(indent + 1); emit("op: %c", expr->binary_op.op);
-    ln(indent + 1); emit("right: "); dump(indent + 1, expr->binary_op.right);
+  case EXPR_BINARY_SEND:
+    emit("BinarySend {");
+    ln(indent + 1); emit("left: "); dump(indent + 1, expr->binary_send.left);
+    ln(indent + 1); emit("selector: "); dump(indent + 1, expr->binary_send.selector);
+    ln(indent + 1); emit("right: "); dump(indent + 1, expr->binary_send.right);
     ln(indent); emit("}");
     break;
 

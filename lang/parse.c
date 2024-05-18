@@ -182,10 +182,11 @@ expr_t *parse_expression(parser_t *parser) {
         return NULL;
     }
 
-    expr = new_expr(EXPR_BINARY_OP);
-    expr->binary_op.op = tok;
-    expr->binary_op.left = left;
-    expr->binary_op.right = right;
+    expr = new_expr(EXPR_BINARY_SEND);
+    expr->binary_send.left = left;
+    expr->binary_send.right = right;
+    expr->binary_send.selector = new_expr(EXPR_IDENTIFIER);
+    asprintf(&expr->binary_send.selector->identifier.name, "%c", (char)tok);
     break;
 
   case '(':

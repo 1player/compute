@@ -69,7 +69,7 @@ enum literal_type {
 enum expr_type {
   EXPR_LITERAL,
   EXPR_IDENTIFIER,
-  EXPR_BINARY_OP,
+  EXPR_BINARY_SEND,
   EXPR_SEND,
 };
 
@@ -93,9 +93,9 @@ typedef struct expr_t {
 
     struct {
       struct expr_t *left;
-      enum token_type op;
+      struct expr_t *selector;
       struct expr_t *right;
-    } binary_op;
+    } binary_send;
   };
 } expr_t;
 
