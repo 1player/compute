@@ -152,6 +152,14 @@ expr_t *parse_expression(parser_t *parser) {
     advance(parser);
     break;
 
+  case TOKEN_STRING:
+    left = new_expr(EXPR_LITERAL);
+    left->literal.type = LITERAL_STRING;
+    left->literal.value_string = parser->cur_token.value_string;
+
+    advance(parser);
+    break;
+
   case TOKEN_ID:
     left = new_expr(EXPR_IDENTIFIER);
     left->identifier.name = parser->cur_token.value_id;

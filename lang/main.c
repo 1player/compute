@@ -5,7 +5,7 @@ int main(int argc, char **argv) {
   (void)argc;
   (void)argv;
 
-  char *s = "print(1 + 2, 3)";
+  char *s = "print(1 + 2, 3)\nprint(\"Hello, world\")";
 
   parser_t parser;
   toplevel_t *top;

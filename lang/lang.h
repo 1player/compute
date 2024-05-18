@@ -63,7 +63,8 @@ int parser_create(parser_t *parser, char *filename, char *input);
 //
 
 enum literal_type {
-  LITERAL_NUMBER
+  LITERAL_NUMBER,
+  LITERAL_STRING,
 };
 
 enum expr_type {
@@ -80,6 +81,7 @@ typedef struct expr_t {
     struct {
       enum literal_type type;
       int value_number;
+      char *value_string;
     } literal;
 
     struct {

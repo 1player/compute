@@ -39,6 +39,9 @@ static void dump(int indent, expr_t *expr) {
     case LITERAL_NUMBER:
       emit("Number(%d)", expr->literal.value_number);
       break;
+    case LITERAL_STRING:
+      emit("String(\"%s\")", expr->literal.value_string);
+      break;
     default:
       panic("Not implemented dump of expr->literal.type %d", expr->literal.type);
     }
