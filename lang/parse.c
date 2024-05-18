@@ -72,7 +72,7 @@ static char *token_explain(token_t *tok) {
 expr_t *parse_expression(parser_t *parser);
 
 expr_t *parse_subexpression(parser_t *parser) {
-  if (expect_and_advance(parser, '(') != 0) {
+  if (expect_and_advance(parser, '(')) {
     return NULL;
   }
   expr_t *expr = parse_expression(parser);
@@ -80,11 +80,41 @@ expr_t *parse_subexpression(parser_t *parser) {
     return NULL;
   }
 
-  if (expect_and_advance(parser, ')') != 0) {
+  if (expect_and_advance(parser, ')')) {
     return NULL;
   }
 
   return expr;
+}
+
+array_t *parse_send_args(parser_t *parser) {
+  if (expect_and_advance(parser, '(')) {
+    return NULL;
+  }
+
+  array_t *args = calloc(1, sizeof(array_t));
+  array_init(args);
+
+  while (peek(parser) != ')') {
+    expr_t *arg = parse_expression(parser);
+    array_append(args, arg);
+
+    enum token_type tok = peek(parser);
+    if (tok == ',') {
+      advance(parser);
+      continue;
+    } else if (tok == ')') {
+      break;
+    }
+
+    parser_error(parser, "Expected ',' or ')' in argument list");
+    return NULL;
+  }
+
+  // Skip over )
+  advance(parser);
+
+  return args;
 }
 
 void synchronize(parser_t *parser) {
@@ -100,7 +130,7 @@ void end_of_expression(parser_t *parser) {
     break;
 
   default:
-    parser_error(parser, "Expected end of expression");
+    parser_error(parser, "Expected end of expression, instead got %s", token_explain(&parser->cur_token));
     synchronize(parser);
   }
 }
@@ -156,6 +186,14 @@ expr_t *parse_expression(parser_t *parser) {
     expr->binary_op.op = tok;
     expr->binary_op.left = left;
     expr->binary_op.right = right;
+    break;
+
+  case '(':
+    expr = new_expr(EXPR_SEND);
+    expr->send.selector = left;
+    if (!(expr->send.args = parse_send_args(parser))) {
+      return NULL;
+    }
     break;
 
   default:

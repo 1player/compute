@@ -97,6 +97,7 @@ int lexer_next(lexer_t *lexer, token_t *token) {
     }
     break;
 
+  case ',':
   case '(':
   case ')':
   case '+':

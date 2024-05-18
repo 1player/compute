@@ -3,6 +3,8 @@
 
 #include "lang.h"
 
+static void dump(int indent, expr_t *expr);
+
 static void emit(char *s, ...) {
   va_list args;
 
@@ -19,6 +21,17 @@ static void ln(int indent) {
   }
 }
 
+static void dump_array(int indent, array_t *ary) {
+  emit("[");
+
+  for (int i = 0; i < ary->size; i++) {
+    expr_t *expr = ary->elements[i];
+    ln(indent + 1); emit("%d: ", i); dump(indent + 1, expr); emit(", ");
+  }
+
+  ln(indent); emit("]");
+}
+
 static void dump(int indent, expr_t *expr) {
   switch (expr->type) {
   case EXPR_LITERAL:
@@ -27,7 +40,7 @@ static void dump(int indent, expr_t *expr) {
       emit("Number(%d)", expr->literal.value_number);
       break;
     default:
-      panic("Not implemented expr->literal.type %d", expr->literal.type);
+      panic("Not implemented dump of expr->literal.type %d", expr->literal.type);
     }
     break;
 
@@ -43,8 +56,15 @@ static void dump(int indent, expr_t *expr) {
     ln(indent); emit("}");
     break;
 
+  case EXPR_SEND:
+    emit("Send {");
+    ln(indent + 1); emit("selector: "); dump(indent + 1, expr->send.selector);
+    ln(indent + 1); emit("args: "); dump_array(indent + 1, expr->send.args);
+    ln(indent); emit("}");
+    break;
+
   default:
-    panic("Not implemented expr->type %d", expr->type);
+    panic("Not implemented dump of expr->type %d", expr->type);
   }
 }
 

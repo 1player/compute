@@ -70,6 +70,7 @@ enum expr_type {
   EXPR_LITERAL,
   EXPR_IDENTIFIER,
   EXPR_BINARY_OP,
+  EXPR_SEND,
 };
 
 typedef struct expr_t {
@@ -82,9 +83,9 @@ typedef struct expr_t {
     } literal;
 
     struct {
-      struct expr_t *callee;
-      array_t args;
-    } call;
+      struct expr_t *selector;
+      array_t *args;
+    } send;
 
     struct {
       char *name;
