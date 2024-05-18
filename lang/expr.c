@@ -31,7 +31,10 @@ static void dump(int indent, expr_t *expr) {
     }
     break;
 
-    
+  case EXPR_IDENTIFIER:
+    emit("Identifier(%s)", expr->identifier.name);
+    break;
+
   case EXPR_BINARY_OP:
     emit("BinaryOp {");
     ln(indent + 1); emit("left: "); dump(indent + 1, expr->binary_op.left);

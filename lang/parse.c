@@ -51,6 +51,11 @@ expr_t *parse_expression(parser_t *parser) {
     left->literal.value_number = parser->cur_token.value_number;
     break;
 
+  case TOKEN_ID:
+    left = new_expr(EXPR_IDENTIFIER);
+    left->identifier.name = parser->cur_token.value_id;
+    break;
+
   default:
     parser_error(parser, "Unexpected token %d while parsing expression", tok);
     return NULL;
@@ -58,7 +63,7 @@ expr_t *parse_expression(parser_t *parser) {
 
   advance(parser);
 
-  expr_t *expr = NULL;
+  expr_t *expr = NULL, *right;
   tok = peek(parser);
 
   switch ((char)tok) {
@@ -68,10 +73,14 @@ expr_t *parse_expression(parser_t *parser) {
   case '/':
     advance(parser);
 
+    if (!(right = parse_expression(parser))) {
+        return NULL;
+    }
+
     expr = new_expr(EXPR_BINARY_OP);
     expr->binary_op.op = tok;
     expr->binary_op.left = left;
-    expr->binary_op.right = parse_expression(parser);
+    expr->binary_op.right = right;
     break;
 
   default:

@@ -2,7 +2,7 @@
 #include "common.h"
 
 int main(int argc, char **argv) {
-  char *s = "1 + 2 * 3";
+  char *s = "1 + 2 * 3 - a";
 
   parser_t parser;
   toplevel_t *top;
