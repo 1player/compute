@@ -18,7 +18,8 @@ void array_resize(array_t *ary, int new_capacity);
 
 enum token_type {
   TOKEN_EOF = 0,
-  TOKEN_ID = 256,
+  TOKEN_NEWLINE = 256,
+  TOKEN_ID,
   TOKEN_STRING,
   TOKEN_NUMBER,
 };

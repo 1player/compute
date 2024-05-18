@@ -112,7 +112,7 @@ int lexer_next(lexer_t *lexer, token_t *token) {
     break;
 
   case '\n':
-    token->type = c;
+    token->type = TOKEN_NEWLINE;
     lexer->ptr++;
     lexer->line++;
     break;

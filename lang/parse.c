@@ -43,7 +43,7 @@ static expr_t *new_expr(enum expr_type type) {
 static char *token_explain(token_t *tok) {
   char *e = NULL;
   
-  if ((int)tok->type < 256) {
+  if ((int)tok->type > 0 && (int)tok->type < 256) {
     asprintf(&e, "character '%c'", (unsigned char)tok->type);
     return e;
   }
@@ -51,6 +51,10 @@ static char *token_explain(token_t *tok) {
   switch (tok->type) {
   case TOKEN_EOF:
     asprintf(&e, "EOF");
+    break;
+
+  case TOKEN_NEWLINE:
+    asprintf(&e, "newline");
     break;
 
   case TOKEN_ID:
@@ -87,6 +91,23 @@ expr_t *parse_subexpression(parser_t *parser) {
   return expr;
 }
 
+void synchronize(parser_t *parser) {
+  // TODO
+}
+
+void end_of_expression(parser_t *parser) {
+  switch(peek(parser)) {
+  case TOKEN_EOF:
+  case TOKEN_NEWLINE:
+    advance(parser);
+    break;
+
+  default:
+    parser_error(parser, "Expected end of expression");
+    synchronize(parser);
+  }
+}
+
 expr_t *parse_expression(parser_t *parser) {
   expr_t *left = NULL;
 
@@ -115,7 +136,8 @@ expr_t *parse_expression(parser_t *parser) {
     char *e = token_explain(&parser->cur_token);
     parser_error(parser, "Unexpected %s while parsing expression", e);
     free(e);
-    
+
+    synchronize(parser);
     return NULL;
   }
 
@@ -140,7 +162,7 @@ expr_t *parse_expression(parser_t *parser) {
     break;
 
   default:
-    return left;
+    expr = left;
   }
 
   return expr;
@@ -154,6 +176,7 @@ toplevel_t *parser_parse(parser_t *parser) {
 
   while (peek(parser) != TOKEN_EOF) {
     if ((expr = parse_expression(parser))) {
+      end_of_expression(parser);
       array_append(&top->exprs, expr);
     } else {
       break;
