@@ -6,24 +6,28 @@ LD := gcc
 CFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra -I $(CURDIR)
 LDFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra -I $(CURDIR)
 
+BUILDDIR := $(CURDIR)/_build
+
 SOURCES := $(wildcard *.c)
 include $(patsubst %,%/Makefile.module,$(MODULES))
 
 OBJECTS := $(patsubst %.c,%.o,$(SOURCES))
 DEPENDS := $(patsubst %.c,%.d,$(SOURCES))
 
-TARGETS := $(patsubst bin/%,%,$(wildcard bin/*))
+TARGETS := $(patsubst bin/%,$(BUILDDIR)/%,$(wildcard bin/*))
 
 ##
 
 all: $(TARGETS)
 
-$(TARGETS): %: $(OBJECTS) bin/%/main.o
-	mkdir -p _build
-	$(LD) $(LDFLAGS) -o _build/$@ $^
+$(TARGETS): $(BUILDDIR)/%: $(OBJECTS) bin/%/main.o | $(BUILDDIR)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+$(BUILDDIR):
+	mkdir $(BUILDDIR)
 
 clean:
-	rm -rf $(OBJECTS) $(DEPENDS) $(patsubst %,_build/%,$(TARGETS))
+	rm -rf $(OBJECTS) $(DEPENDS) $(BUILDDIR)
 
 %.o: %.c Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
