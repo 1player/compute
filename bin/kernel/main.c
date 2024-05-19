@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "scheduler/scheduler.h"
+#include "kernel/scheduler.h"
 
 struct sieve {
   int n;

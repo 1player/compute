@@ -1,6 +1,4 @@
-kernel/das.kernel
-lang/das.lang
-object/das.object
 **/*.o
 **/*.d
 **/*.a
+_build/

@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#include "lib/lib.h"
+#include "kernel/lib.h"
 
 typedef unsigned int PID;
 
