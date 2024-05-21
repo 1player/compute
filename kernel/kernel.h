@@ -1,11 +1,11 @@
-#ifndef SCHEDULER_H
-#define SCHEDULER_H
+#ifndef KERNEL_H
+#define KERNEL_H
 
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <pthread.h>
 
-#include "kernel/lib.h"
+#include "lib.h"
 
 typedef unsigned int PID;
 
@@ -56,4 +56,4 @@ void scheduler_absorb_main_thread();
 void scheduler_cast(PID destination, Message *message);
 PID scheduler_self();
 
-#endif // CORE_H
+#endif

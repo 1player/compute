@@ -1,4 +1,5 @@
 **/*.o
 **/*.d
 **/*.a
-_build/
+bootstrap/bootstrap
+kernel/kernel

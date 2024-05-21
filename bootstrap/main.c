@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "lang/lang.h"
+#include "lang.h"
 
 char *repl_read() {
   char *line = NULL;
@@ -16,7 +16,7 @@ char *repl_read() {
   return line;
 }
 
-expr_t *repl_eval(char *input) {
+expr_t *repl_parse(char *input) {
   parser_t parser;
 
   expr_t *expr = parser_parse_expression(&parser, input);
@@ -30,6 +30,11 @@ expr_t *repl_eval(char *input) {
   return expr;
 }
 
+expr_t *repl_eval(expr_t *expr) {
+  return expr;
+}
+
+
 void repl_print(expr_t *expr) {
   expr_dump(expr);
   free(expr);
@@ -37,9 +42,9 @@ void repl_print(expr_t *expr) {
   putchar('\n');
 }
 
-int main() {
+void repl() {
   char *input;
-  expr_t *expr;
+  expr_t *expr, *result;
 
   printf("DAS//compute REPL.\nWrite 'quit' to exit.\n");
 
@@ -49,11 +54,20 @@ int main() {
     if (!input) {
       break;
     }
-    expr = repl_eval(input);
-    if (expr) {
-      repl_print(expr);
+    expr = repl_parse(input);
+    if (!expr) {
+      continue;
     }
-  }
 
+    result = repl_eval(expr);
+    if (!result) {
+      continue;
+    }
+    repl_print(expr);
+  }
+}
+
+int main() {
+  repl();
   return 0;
 }

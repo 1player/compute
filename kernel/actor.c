@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "scheduler.h"
+#include "kernel.h"
 
 Actor *actor_new() {
   Actor *actor = malloc(sizeof(Actor));

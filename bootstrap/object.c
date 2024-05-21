@@ -1,45 +1,8 @@
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct Meta Meta;
-typedef struct Object Object;
-
-typedef intptr_t NativeInteger;
-
-#define WORD_SIZE (sizeof(NativeInteger))
-
-#define TO_NATIVE(n) (((n) << 1) | 1)
-#define FROM_NATIVE(n) ((n) >> 1)
-
-typedef struct {
-  Meta *_meta;
-  void *key;
-  void *method;
-  void *data;
-} MetaEntry;
-
-typedef struct Meta {
-  Meta *_meta;
-
-  // Method closures
-  NativeInteger n_entries;
-  MetaEntry *entries[];
-} Meta;
-
-#define OBJECT_SIZE(o) (sizeof(o) - WORD_SIZE)
-
-typedef struct {
-  Meta *_meta;
-  NativeInteger length;
-  char data[];
-} String;
-
-typedef struct Object {
-  Meta *_meta;
-  char data[];
-} Object;
+#include "object.h"
 
 Meta *meta_meta = NULL;
 
@@ -111,22 +74,9 @@ MetaEntry string_methods[] = {
   { .key = "println", .method = string_println },
 };
 
-void bootstrap() {
+void object_bootstrap() {
   meta_meta = meta_new(0, NULL);
   meta_meta->_meta = meta_meta;
 
   string_meta = meta_new(2, (MetaEntry **)&string_methods);
-}
-
-
-int main(int argc, char *argv[]) {
-  bootstrap();
-
-  String *hello = string_new_from_char("hello, ");
-  String *world = string_new_from_char("world");
-
-  String *hello_world = string_concat(hello, world);
-  string_println(hello_world);
-
-  return 0;
 }
