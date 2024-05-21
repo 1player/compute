@@ -209,10 +209,12 @@ expr_t *parse_expression(parser_t *parser) {
     expr = left;
   }
 
+  end_of_expression(parser);
+
   return expr;
 }
 
-toplevel_t *parser_parse(parser_t *parser) {
+static toplevel_t *parse_toplevel(parser_t *parser) {
   expr_t *expr;
 
   toplevel_t *top = calloc(1, sizeof(toplevel_t));
@@ -220,7 +222,6 @@ toplevel_t *parser_parse(parser_t *parser) {
 
   while (peek(parser) != TOKEN_EOF) {
     if ((expr = parse_expression(parser))) {
-      end_of_expression(parser);
       array_append(&top->exprs, expr);
     } else {
       break;
@@ -231,15 +232,30 @@ toplevel_t *parser_parse(parser_t *parser) {
   return top;
 }
 
-int parser_create(parser_t *parser, char *file, char *input) {
+static int parser_init(parser_t *parser, const char *file, const char *input) {
   if (lexer_create(&parser->lexer, file, input)) {
     return 1;
   }
 
   parser->cur_token.type = -1;
   parser->prev_token.type = -1;
+  parser->had_errors = false;
 
   advance(parser);
 
   return 0;
+}
+
+toplevel_t *parser_parse_toplevel(parser_t *parser, const char *file, const char *input) {
+  if (parser_init(parser, file, input)) {
+    return NULL;
+  }
+  return parse_toplevel(parser);
+}
+
+expr_t *parser_parse_expression(parser_t *parser, const char *input) {
+  if (parser_init(parser, "expr", input)) {
+    return NULL;
+  }
+  return parse_expression(parser);
 }

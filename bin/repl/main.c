@@ -19,19 +19,15 @@ char *repl_read() {
 expr_t *repl_eval(char *input) {
   parser_t parser;
 
-  if (parser_create(&parser, "repl", input) != 0) {
-    panic("Unable to create parser\n");
-  }
-
-  toplevel_t *top = parser_parse(&parser);
-
+  expr_t *expr = parser_parse_expression(&parser, input);
   free(input);
 
-  if (!parser.had_errors && top->exprs.size > 0) {
-    return top->exprs.elements[0];
+  if (parser.had_errors) {
+    free(expr);
+    return NULL;
   }
 
-  return NULL;
+  return expr;
 }
 
 void repl_print(expr_t *expr) {

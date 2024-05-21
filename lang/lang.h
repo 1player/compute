@@ -46,22 +46,6 @@ int lexer_next(lexer_t *lexer, token_t *token);
 
 //
 
-typedef struct {
-  lexer_t lexer;
-  token_t cur_token;
-  token_t prev_token;
-  bool had_errors;
-} parser_t;
-
-typedef struct toplevel_t {
-  array_t exprs;
-} toplevel_t;
-
-toplevel_t *parser_parse(parser_t *parser);
-int parser_create(parser_t *parser, char *filename, char *input);
-
-//
-
 enum literal_type {
   LITERAL_NUMBER,
   LITERAL_STRING,
@@ -102,6 +86,22 @@ typedef struct expr_t {
 } expr_t;
 
 void expr_dump(expr_t *expr);
+
+//
+
+typedef struct {
+  lexer_t lexer;
+  token_t cur_token;
+  token_t prev_token;
+  bool had_errors;
+} parser_t;
+
+typedef struct toplevel_t {
+  array_t exprs;
+} toplevel_t;
+
+toplevel_t *parser_parse_toplevel(parser_t *parser, const char *file, const char *input);
+expr_t *parser_parse_expression(parser_t *parser, const char *input);
 
 //
 
