@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+
 #include "lang.h"
+#include "object.h"
 
 char *repl_read() {
   char *line = NULL;
@@ -68,6 +70,10 @@ void repl() {
 }
 
 int main() {
-  repl();
+  //repl();
+
+  World world;
+  world_bootstrap(&world);
+
   return 0;
 }
