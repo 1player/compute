@@ -3,42 +3,9 @@
 
 #include "lang.h"
 
-static void parser_error(parser_t *parser, char *msg, ...) {
-  va_list args;
-  va_start(args, msg);
-  error(parser->lexer.file, parser->lexer.line, msg, args);
-  va_end(args);
-
-  parser->had_errors = true;
-}
-
-static enum token_type peek(parser_t *parser) {
-  return parser->cur_token.type;
-}
-
-static void advance(parser_t *parser) {
-  parser->prev_token = parser->cur_token;
-  lexer_next(&parser->lexer, &parser->cur_token);
-}
-
-static int expect_and_advance(parser_t *parser, enum token_type expected) {
-  if (peek(parser) == expected) {
-    advance(parser);
-    return 0;
-  }
-
-  return 1;
-}
-
-static expr_t *new_expr(enum expr_type type) {
-  expr_t *expr = calloc(1, sizeof(expr_t));
-  expr->type = type;
-  return expr;
-}
-
 static char *token_explain(token_t *tok) {
   char *e = NULL;
-  
+
   if ((int)tok->type > 0 && (int)tok->type < 256) {
     asprintf(&e, "character '%c'", (unsigned char)tok->type);
     return e;
@@ -67,6 +34,40 @@ static char *token_explain(token_t *tok) {
   }
 
   return e;
+}
+
+static void parser_error(parser_t *parser, char *msg, ...) {
+  va_list args;
+  va_start(args, msg);
+  error(parser->lexer.file, parser->lexer.line, msg, args);
+  va_end(args);
+
+  parser->had_errors = true;
+}
+
+static enum token_type peek(parser_t *parser) {
+  return parser->cur_token.type;
+}
+
+static void advance(parser_t *parser) {
+  parser->prev_token = parser->cur_token;
+  lexer_next(&parser->lexer, &parser->cur_token);
+}
+
+static int expect_and_advance(parser_t *parser, enum token_type expected) {
+  if (peek(parser) == expected) {
+    advance(parser);
+    return 0;
+  }
+
+  parser_error(parser, "Unexpected token %s", token_explain(&parser->cur_token));
+  return 1;
+}
+
+static expr_t *new_expr(enum expr_type type) {
+  expr_t *expr = calloc(1, sizeof(expr_t));
+  expr->type = type;
+  return expr;
 }
 
 expr_t *parse_expression(parser_t *parser);
@@ -199,10 +200,33 @@ expr_t *parse_expression(parser_t *parser) {
 
   case '(':
     expr = new_expr(EXPR_SEND);
+    expr->send.receiver = new_expr(EXPR_SELF);
     expr->send.selector = left;
     if (!(expr->send.args = parse_send_args(parser))) {
       return NULL;
     }
+
+    break;
+
+  case '.':
+    advance(parser);
+
+    tok = peek(parser);
+    if (tok != TOKEN_ID) {
+      parser_error(parser, "Expected identifier, got %s", token_explain(&parser->cur_token));
+      return NULL;
+    }
+
+    expr = new_expr(EXPR_SEND);
+    expr->send.receiver = left;
+    expr->send.selector = new_expr(EXPR_IDENTIFIER);
+    expr->send.selector->identifier.name = parser->cur_token.value_id;
+
+    advance(parser);
+    if (!(expr->send.args = parse_send_args(parser))) {
+      return NULL;
+    }
+
     break;
 
   default:

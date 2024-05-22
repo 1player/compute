@@ -14,6 +14,7 @@ typedef struct {
 void array_init(array_t *ary);
 void array_append(array_t *ary, void *el);
 void array_resize(array_t *ary, int new_capacity);
+void *array_pop_start(array_t *ary);
 
 //
 
@@ -54,6 +55,7 @@ enum literal_type {
 enum expr_type {
   EXPR_LITERAL,
   EXPR_IDENTIFIER,
+  EXPR_SELF,
   EXPR_BINARY_SEND,
   EXPR_SEND,
 };
@@ -69,6 +71,7 @@ typedef struct expr_t {
     } literal;
 
     struct {
+      struct expr_t *receiver;
       struct expr_t *selector;
       array_t *args;
     } send;

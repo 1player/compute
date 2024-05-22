@@ -47,6 +47,10 @@ static void dump(int indent, expr_t *expr) {
     }
     break;
 
+  case EXPR_SELF:
+    emit("Self");
+    break;
+
   case EXPR_IDENTIFIER:
     emit("Identifier(%s)", expr->identifier.name);
     break;
@@ -61,6 +65,7 @@ static void dump(int indent, expr_t *expr) {
 
   case EXPR_SEND:
     emit("Send {");
+    ln(indent + 1); emit("receiver: "); dump(indent + 1, expr->send.receiver);
     ln(indent + 1); emit("selector: "); dump(indent + 1, expr->send.selector);
     ln(indent + 1); emit("args: "); dump_array(indent + 1, expr->send.args);
     ln(indent); emit("}");

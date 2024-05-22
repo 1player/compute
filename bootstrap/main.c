@@ -32,7 +32,7 @@ expr_t *repl_parse(char *input) {
   return expr;
 }
 
-expr_t *repl_eval(expr_t *expr) {
+expr_t *repl_eval(expr_t *expr, World *world) {
   return expr;
 }
 
@@ -44,7 +44,7 @@ void repl_print(expr_t *expr) {
   putchar('\n');
 }
 
-void repl() {
+void repl(World *world) {
   char *input;
   expr_t *expr, *result;
 
@@ -61,7 +61,7 @@ void repl() {
       continue;
     }
 
-    result = repl_eval(expr);
+    result = repl_eval(expr, world);
     if (!result) {
       continue;
     }
@@ -70,10 +70,10 @@ void repl() {
 }
 
 int main() {
-  //repl();
-
   World world;
   world_bootstrap(&world);
+
+  repl(&world);
 
   return 0;
 }
