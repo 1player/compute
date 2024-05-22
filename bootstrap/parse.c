@@ -209,8 +209,6 @@ expr_t *parse_expression(parser_t *parser) {
     expr = left;
   }
 
-  end_of_expression(parser);
-
   return expr;
 }
 
@@ -222,6 +220,7 @@ static toplevel_t *parse_toplevel(parser_t *parser) {
 
   while (peek(parser) != TOKEN_EOF) {
     if ((expr = parse_expression(parser))) {
+      end_of_expression(parser);
       array_append(&top->exprs, expr);
     } else {
       break;
