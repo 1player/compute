@@ -126,9 +126,10 @@ Object *string_inspect(String *self) {
   return world_make_string(buf);
 }
 
-void string_println(String *self) {
+Object *string_println(String *self) {
   fwrite(self->buf, self->len, 1, stdout);
   fputc('\n', stdout);
+  return NULL;
 }
 
 static bool string_equals_(String *self, String *other) {
@@ -141,7 +142,7 @@ static bool string_equals_(String *self, String *other) {
 
 //
 
-Object *_send(Object *receiver, char *selector, int n_args, ...) {
+static void *bind(Object *receiver, char *selector) {
   VTable *vtable;
 
   if (IS_NATIVE(receiver)) {
@@ -150,34 +151,51 @@ Object *_send(Object *receiver, char *selector, int n_args, ...) {
     vtable = receiver->_vtable;
   }
 
-  void *ptr = vtable_lookup(vtable, selector);
+  return vtable_lookup(vtable, selector);
+}
+
+#define DISPATCH(ret, ptr, n_args, next_arg) do {    \
+    switch ((n_args)) {                      \
+    case 0:                                  \
+      Object *(*fn0)(Object *) = (ptr);      \
+      ret = fn0(receiver);                   \
+      break;                                 \
+    case 1:                                         \
+      Object *(*fn1)(Object *, Object *) = (ptr);   \
+      ret = fn1(receiver, (next_arg));              \
+      break;                                        \
+    default:                                                            \
+      fprintf(stderr, "Sending messages with %d arguments not implemented\n", n_args); \
+    }                                                                   \
+  } while(0)
+
+Object *_send(Object *receiver, char *selector, int n_args, ...) {
+  void *ptr = bind(receiver, selector);
+  if (!ptr) {
+    fprintf(stderr, "Object %p doesn't know how to respond to '%s'\n", receiver, selector);
+    return NULL;
+  }
+
+  va_list args;
+  va_start(args, n_args);
+
+  Object *ret = NULL;
+  DISPATCH(ret, ptr, n_args, va_arg(args, Object *));
+
+  va_end(args);
+  return ret;
+}
+
+Object *send_args(Object *receiver, char *selector, array_t *args) {
+  void *ptr = bind(receiver, selector);
   if (!ptr) {
     fprintf(stderr, "Object %p doesn't know how to respond to '%s'\n", receiver, selector);
     return NULL;
   }
 
   Object *ret = NULL;
-  va_list args;
-  va_start(args, n_args);
-
-#define ARG (va_arg(args, Object *))
-
-  switch (n_args) {
-  case 0:
-    Object *(*fn0)(Object *) = ptr;
-    ret = fn0(receiver);
-    break;
-
-  case 1:
-    Object *(*fn1)(Object *, Object *) = ptr;
-    ret = fn1(receiver, ARG);
-    break;
-
-  default:
-    fprintf(stderr, "Sending messages with %d arguments not implemented\n", n_args);
-  }
-
-  va_end(args);
+  int i = 0;
+  DISPATCH(ret, ptr, args->size, args->elements[i++]);
 
   return ret;
 }

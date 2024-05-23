@@ -54,6 +54,7 @@ Object *world_make_string(char *str);
 Object *world_make_native_integer(intptr_t number);
 
 Object *_send(Object *receiver, char *selector, int n_args, ...);
+Object *send_args(Object *receiver, char *selector, array_t *args);
 
 Object *eval(expr_t *expr);
 
