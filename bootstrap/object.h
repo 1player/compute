@@ -47,6 +47,17 @@ typedef struct World {
   array_t entries; // Array of tuples (String, Object)
 } World;
 
+extern VTable *vtable_vt;
+extern VTable *object_vt;
+extern VTable *string_vt;
+extern VTable *native_integer_vt;
+extern VTable *tuple_vt;
+
+VTable *vtable_delegated(VTable *self, size_t object_size);
+Object *vtable_allocate(VTable *self);
+void vtable_add_method(VTable *self, String *name, void *ptr);
+void *vtable_lookup(VTable *self, char *selector);
+
 void world_bootstrap();
 Object *world_lookup(char *name);
 Object *world_make_tuple(Object *left, Object *right);
@@ -60,5 +71,10 @@ Object *eval(expr_t *expr);
 
 #define VA_NARGS(...) ((int)(sizeof((Object *[]){ __VA_ARGS__ })/sizeof(Object *)))
 #define send(RCV, SEL, ...) _send((Object *)(RCV), (SEL), VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)
+
+typedef struct {
+  char *name;
+  void *fn;
+} method_descriptor_t;
 
 #endif

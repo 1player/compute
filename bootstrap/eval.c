@@ -2,14 +2,15 @@
 
 #include "lang.h"
 #include "object.h"
+#include "builtins.h"
 
 static Object *eval_literal(expr_t *expr) {
   switch (expr->literal.type) {
   case LITERAL_STRING:
-    return world_make_string(expr->literal.value_string);
+    return string_new(expr->literal.value_string);
 
   case LITERAL_NUMBER:
-    return world_make_native_integer(expr->literal.value_number);
+    return native_integer_new(expr->literal.value_number);
   }
 
   return NULL;

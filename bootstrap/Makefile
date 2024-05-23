@@ -4,7 +4,7 @@ LD := gcc
 CFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra -I $(CURDIR)
 LDFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra -I $(CURDIR)
 
-SOURCES := $(wildcard *.c)
+SOURCES := $(wildcard *.c) $(wildcard builtins/*.c)
 OBJECTS := $(patsubst %.c,%.o,$(SOURCES))
 DEPENDS := $(patsubst %.c,%.d,$(SOURCES))
 

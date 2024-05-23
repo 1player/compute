@@ -4,6 +4,7 @@
 
 #include "lang.h"
 #include "object.h"
+#include "builtins.h"
 
 static char *repl_read() {
   char *line = NULL;
@@ -65,7 +66,7 @@ static void repl() {
 int main() {
   world_bootstrap();
 
-  Object *hw = world_make_string("DAS//compute REPL.\nWrite 'quit' to exit.");
+  Object *hw = string_new("DAS//compute REPL.\nWrite 'quit' to exit.");
   send(hw, "println");
 
   repl();

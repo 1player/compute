@@ -3,23 +3,10 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include "lib.h"
 #include "object.h"
+#include "builtins.h"
 
-#define max(a,b)             \
-({                           \
-    __typeof__ (a) _a = (a); \
-    __typeof__ (b) _b = (b); \
-    _a > _b ? _a : _b;       \
-})
-
-#define min(a,b)             \
-({                           \
-    __typeof__ (a) _a = (a); \
-    __typeof__ (b) _b = (b); \
-    _a < _b ? _a : _b;       \
-})
-
-// Globals
 VTable *vtable_vt;
 VTable *object_vt;
 VTable *string_vt;
@@ -89,72 +76,14 @@ void *vtable_lookup(VTable *self, char *selector) {
 Object *object_inspect(Object *self) {
   char *buf;
   asprintf(&buf, "<Object %p>", self);
-  return world_make_string(buf);
+  return string_new(buf);
 }
 
-Object *native_integer_plus(NativeInteger self, NativeInteger other) {
-  return TO_NATIVE(FROM_NATIVE(self) + FROM_NATIVE(other));
-}
+method_descriptor_t Object_methods[] = {
+  { .name = "inspect", .fn = object_inspect },
+  { NULL },
+};
 
-Object *native_integer_minus(NativeInteger self, NativeInteger other) {
-  return TO_NATIVE(FROM_NATIVE(self) - FROM_NATIVE(other));
-}
-
-Object *native_integer_multiply(NativeInteger self, NativeInteger other) {
-  return TO_NATIVE(FROM_NATIVE(self) * FROM_NATIVE(other));
-}
-
-Object *native_integer_divide(NativeInteger self, NativeInteger other) {
-  return TO_NATIVE(FROM_NATIVE(self) / FROM_NATIVE(other));
-}
-
-Object *native_integer_inspect(NativeInteger self) {
-  char *buf;
-  asprintf(&buf, "%ld", FROM_NATIVE(self));
-  return world_make_string(buf);
-}
-
-String *string_new(char *buf) {
-  String *str = (String *)vtable_allocate(string_vt);
-  str->buf = buf;
-  str->len = strlen(buf);
-  return str;
-}
-
-String *string_concat(String *self, String *other) {
-  String *str = (String *)vtable_allocate(self->_vtable);
-  str->len = self->len + other->len;
-  str->buf = malloc(str->len);
-
-  memmove(str->buf, self->buf, self->len);
-  memmove(&str->buf[self->len], other->buf, other->len);
-
-  return str;
-}
-
-Object *string_inspect(String *self) {
-  char *buf = malloc(self->len + 2 + 1);
-  buf[0] = '"';
-  memcpy(&buf[1], self->buf, self->len);
-  buf[self->len + 1] = '"';
-  buf[self->len + 2] = 0;
-
-  return world_make_string(buf);
-}
-
-Object *string_println(String *self) {
-  fwrite(self->buf, self->len, 1, stdout);
-  fputc('\n', stdout);
-  return NULL;
-}
-
-static bool string_equals_(String *self, String *other) {
-  if (self->len != other->len) {
-    return false;
-  }
-
-  return strncmp(self->buf, other->buf, self->len) == 0;
-}
 
 //
 
@@ -236,36 +165,25 @@ Object *world_lookup(char *name) {
   return NULL;
 }
 
-Object *world_make_tuple(Object *left, Object *right) {
-  Tuple *t = (Tuple *)vtable_allocate(tuple_vt);
-  t->left = left;
-  t->right = right;
-  return (Object *)t;
-}
-
-Object *world_make_string(char *str) {
-  String *s = (String *)vtable_allocate(string_vt);
-  s->buf = str;
-  s->len = strlen(str);
-  return (Object *)s;
-}
-
-Object *world_make_native_integer(intptr_t number) {
-  return (Object *)TO_NATIVE(number);
-}
-
 void world_add(World *world, String *name, Object *obj) {
   // Check if an entry with this name already exists
   for (int i = 0; i < world->entries.size; i++) {
     Tuple *t = world->entries.elements[i];
-    if (string_equals_(name, (String *)t->left)) {
+    if (string_equals(name, (String *)t->left)) {
       t->right = obj;
       return;
     }
   }
 
-  Object *t = world_make_tuple((Object *)name, (Object *)obj);
+  Object *t = tuple_new((Object *)name, (Object *)obj);
   array_append(&world->entries, t);
+}
+
+static void add_method_descriptors(VTable *vt, method_descriptor_t *desc) {
+  while (desc && desc->name) {
+    vtable_add_method(vt, (String *)string_new(desc->name), desc->fn);
+    desc++;
+  }
 }
 
 void world_bootstrap() {
@@ -280,30 +198,24 @@ void world_bootstrap() {
 
   // String
   string_vt = vtable_delegated(vtable_vt, sizeof(String));
-  vtable_add_method(string_vt, string_new("println"), string_println);
-  vtable_add_method(string_vt, string_new("concat"), string_concat);
-  vtable_add_method(string_vt, string_new("inspect"), string_inspect);
+  add_method_descriptors(string_vt, String_methods);
 
   // Additional methods on Object
-  vtable_add_method(object_vt, string_new("inspect"), object_inspect);
+  add_method_descriptors(object_vt, Object_methods);
 
   // NativeInteger
   native_integer_vt = vtable_delegated(vtable_vt, 0);
-  vtable_add_method(native_integer_vt, string_new("inspect"), native_integer_inspect);
-  vtable_add_method(native_integer_vt, string_new("+"), native_integer_plus);
-  vtable_add_method(native_integer_vt, string_new("-"), native_integer_minus);
-  vtable_add_method(native_integer_vt, string_new("*"), native_integer_multiply);
-  vtable_add_method(native_integer_vt, string_new("/"), native_integer_divide);
+  add_method_descriptors(native_integer_vt, NativeInteger_methods);
 
   // Tuple
   tuple_vt = vtable_delegated(vtable_vt, sizeof(Tuple));
 
-  // World
-  world_vt = vtable_delegated(vtable_vt, sizeof(World));
-  world = (World *)vtable_allocate(world_vt);
-
-  world_init(world);
-  world_add(world, string_new("VTable"), (Object *)vtable_vt);
-  world_add(world, string_new("Object"), (Object *)object_vt);
-  world_add(world, string_new("String"), (Object *)string_vt);
+  /* // World
+   * world_vt = vtable_delegated(vtable_vt, sizeof(World));
+   * world = (World *)vtable_allocate(world_vt);
+   *
+   * world_init(world);
+   * world_add(world, string_new("VTable"), (Object *)vtable_vt);
+   * world_add(world, string_new("Object"), (Object *)object_vt);
+   * world_add(world, string_new("String"), (Object *)string_vt); */
 }
