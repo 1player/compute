@@ -1,5 +1,7 @@
 #include <stddef.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "lang.h"
 
@@ -255,7 +257,7 @@ static toplevel_t *parse_toplevel(parser_t *parser) {
   return top;
 }
 
-static int parser_init(parser_t *parser, const char *file, const char *input) {
+static int parser_init(parser_t *parser, char *file, char *input) {
   if (lexer_create(&parser->lexer, file, input)) {
     return 1;
   }
@@ -269,14 +271,14 @@ static int parser_init(parser_t *parser, const char *file, const char *input) {
   return 0;
 }
 
-toplevel_t *parser_parse_toplevel(parser_t *parser, const char *file, const char *input) {
+toplevel_t *parser_parse_toplevel(parser_t *parser, char *file, char *input) {
   if (parser_init(parser, file, input)) {
     return NULL;
   }
   return parse_toplevel(parser);
 }
 
-expr_t *parser_parse_expression(parser_t *parser, const char *input) {
+expr_t *parser_parse_expression(parser_t *parser, char *input) {
   if (parser_init(parser, "expr", input)) {
     return NULL;
   }

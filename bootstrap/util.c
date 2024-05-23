@@ -4,7 +4,7 @@
 
 #include "lang.h"
 
-void panic(char *msg, ...) {
+void panic(const char *msg, ...) {
   va_list args;
 
   fputs("PANIC: ", stderr);
@@ -18,7 +18,7 @@ void panic(char *msg, ...) {
   exit(1);
 }
 
-void info(char *msg, ...) {
+void info(const char *msg, ...) {
   va_list args;
 
   va_start(args, msg);
@@ -29,7 +29,7 @@ void info(char *msg, ...) {
 }
 
 
-void error(char *file, int line, char *msg, va_list args) {
+void error(const char *file, const int line, const char *msg, va_list args) {
   fprintf(stderr, "%s:%d: ", file, line);
   vfprintf(stderr, msg, args);
   fputc('\n', stderr);

@@ -1,22 +1,10 @@
 #ifndef LANG_H
 #define LANG_H
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stddef.h>
 
-typedef struct {
-  void **elements;
-  int size;
-  int capacity;
-} array_t;
-
-void array_init(array_t *ary);
-void array_append(array_t *ary, void *el);
-void array_resize(array_t *ary, int new_capacity);
-void *array_pop_start(array_t *ary);
-
-//
+#include "lib.h"
 
 enum token_type {
   TOKEN_EOF = 0,
@@ -38,7 +26,7 @@ typedef struct token {
 
 typedef struct lexer {
   char *ptr;
-  char *file;
+  const char *file;
   unsigned int line;
 } lexer_t;
 
@@ -103,13 +91,8 @@ typedef struct toplevel_t {
   array_t exprs;
 } toplevel_t;
 
-toplevel_t *parser_parse_toplevel(parser_t *parser, const char *file, const char *input);
-expr_t *parser_parse_expression(parser_t *parser, const char *input);
+toplevel_t *parser_parse_toplevel(parser_t *parser, char *file, char *input);
+expr_t *parser_parse_expression(parser_t *parser, char *input);
 
-//
-
-void panic(char *msg, ...);
-void info(char *msg, ...);
-void error(char *file, int line, char *msg, va_list args);
 
 #endif
