@@ -5,6 +5,13 @@
 
 #include "lang.h"
 
+typedef struct {
+  lexer_t lexer;
+  token_t cur_token;
+  token_t prev_token;
+  bool had_errors;
+} parser_t;
+
 static char *token_explain(token_t *tok) {
   char *e = NULL;
 
@@ -72,13 +79,13 @@ static expr_t *new_expr(enum expr_type type) {
   return expr;
 }
 
-expr_t *parse_expression(parser_t *parser);
+expr_t *expression(parser_t *parser);
 
-expr_t *parse_subexpression(parser_t *parser) {
+expr_t *subexpression(parser_t *parser) {
   if (expect_and_advance(parser, '(')) {
     return NULL;
   }
-  expr_t *expr = parse_expression(parser);
+  expr_t *expr = expression(parser);
   if (!expr) {
     return NULL;
   }
@@ -90,7 +97,7 @@ expr_t *parse_subexpression(parser_t *parser) {
   return expr;
 }
 
-array_t *parse_send_args(parser_t *parser) {
+static array_t *send_args(parser_t *parser) {
   if (expect_and_advance(parser, '(')) {
     return NULL;
   }
@@ -99,7 +106,7 @@ array_t *parse_send_args(parser_t *parser) {
   array_init(args);
 
   while (peek(parser) != ')') {
-    expr_t *arg = parse_expression(parser);
+    expr_t *arg = expression(parser);
     array_append(args, arg);
 
     enum token_type tok = peek(parser);
@@ -138,13 +145,13 @@ void end_of_expression(parser_t *parser) {
   }
 }
 
-expr_t *parse_expression(parser_t *parser) {
+expr_t *expression(parser_t *parser) {
   expr_t *left = NULL;
 
   enum token_type tok = peek(parser);
   switch ((int)tok) {
   case '(':
-    left = parse_subexpression(parser);
+    left = subexpression(parser);
     break;
 
   case TOKEN_NUMBER:
@@ -189,7 +196,7 @@ expr_t *parse_expression(parser_t *parser) {
   case '/':
     advance(parser);
 
-    if (!(right = parse_expression(parser))) {
+    if (!(right = expression(parser))) {
         return NULL;
     }
 
@@ -204,7 +211,7 @@ expr_t *parse_expression(parser_t *parser) {
     expr = new_expr(EXPR_SEND);
     expr->send.receiver = new_expr(EXPR_SELF);
     expr->send.selector = left;
-    if (!(expr->send.args = parse_send_args(parser))) {
+    if (!(expr->send.args = send_args(parser))) {
       return NULL;
     }
 
@@ -225,7 +232,7 @@ expr_t *parse_expression(parser_t *parser) {
     expr->send.selector->identifier.name = parser->cur_token.value_id;
 
     advance(parser);
-    if (!(expr->send.args = parse_send_args(parser))) {
+    if (!(expr->send.args = send_args(parser))) {
       return NULL;
     }
 
@@ -238,21 +245,20 @@ expr_t *parse_expression(parser_t *parser) {
   return expr;
 }
 
-static toplevel_t *parse_toplevel(parser_t *parser) {
+static toplevel_t *toplevel(parser_t *parser) {
   expr_t *expr;
 
   toplevel_t *top = calloc(1, sizeof(toplevel_t));
   array_init(&top->exprs);
 
   while (peek(parser) != TOKEN_EOF) {
-    if ((expr = parse_expression(parser))) {
+    if ((expr = expression(parser))) {
       end_of_expression(parser);
       array_append(&top->exprs, expr);
     } else {
       break;
     }
   }
-
 
   return top;
 }
@@ -271,16 +277,28 @@ static int parser_init(parser_t *parser, char *file, char *input) {
   return 0;
 }
 
-toplevel_t *parser_parse_toplevel(parser_t *parser, char *file, char *input) {
-  if (parser_init(parser, file, input)) {
+toplevel_t *parse_toplevel(char *file, char *input) {
+  parser_t parser;
+  if (parser_init(&parser, file, input)) {
     return NULL;
   }
-  return parse_toplevel(parser);
+
+  toplevel_t *top = toplevel(&parser);
+  if (parser.had_errors) {
+    return NULL;
+  }
+  return top;
 }
 
-expr_t *parser_parse_expression(parser_t *parser, char *input) {
-  if (parser_init(parser, "expr", input)) {
+expr_t *parse_expression(char *input) {
+  parser_t parser;
+  if (parser_init(&parser, "expr", input)) {
     return NULL;
   }
-  return parse_expression(parser);
+
+  expr_t *expr = expression(&parser);
+  if (parser.had_errors) {
+    return NULL;
+  }
+  return expr;
 }

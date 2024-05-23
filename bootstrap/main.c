@@ -20,17 +20,13 @@ static char *repl_read() {
 }
 
 static expr_t *repl_parse(char *input) {
-  parser_t parser;
-
-  expr_t *expr = parser_parse_expression(&parser, input);
+  expr_t *expr = parse_expression(input);
   free(input);
 
-  if (parser.had_errors) {
-    free(expr);
-    return NULL;
+  if (expr) {
+    expr_dump(expr);
   }
 
-  expr_dump(expr);
   return expr;
 }
 
