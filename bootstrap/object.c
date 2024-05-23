@@ -92,6 +92,22 @@ Object *object_inspect(Object *self) {
   return world_make_string(buf);
 }
 
+Object *native_integer_plus(NativeInteger self, NativeInteger other) {
+  return TO_NATIVE(FROM_NATIVE(self) + FROM_NATIVE(other));
+}
+
+Object *native_integer_minus(NativeInteger self, NativeInteger other) {
+  return TO_NATIVE(FROM_NATIVE(self) - FROM_NATIVE(other));
+}
+
+Object *native_integer_multiply(NativeInteger self, NativeInteger other) {
+  return TO_NATIVE(FROM_NATIVE(self) * FROM_NATIVE(other));
+}
+
+Object *native_integer_divide(NativeInteger self, NativeInteger other) {
+  return TO_NATIVE(FROM_NATIVE(self) / FROM_NATIVE(other));
+}
+
 Object *native_integer_inspect(NativeInteger self) {
   char *buf;
   asprintf(&buf, "%ld", FROM_NATIVE(self));
@@ -274,6 +290,10 @@ void world_bootstrap() {
   // NativeInteger
   native_integer_vt = vtable_delegated(vtable_vt, 0);
   vtable_add_method(native_integer_vt, string_new("inspect"), native_integer_inspect);
+  vtable_add_method(native_integer_vt, string_new("+"), native_integer_plus);
+  vtable_add_method(native_integer_vt, string_new("-"), native_integer_minus);
+  vtable_add_method(native_integer_vt, string_new("*"), native_integer_multiply);
+  vtable_add_method(native_integer_vt, string_new("/"), native_integer_divide);
 
   // Tuple
   tuple_vt = vtable_delegated(vtable_vt, sizeof(Tuple));

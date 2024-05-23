@@ -9,8 +9,8 @@ typedef struct Object Object;
 
 typedef intptr_t NativeInteger;
 
-#define TO_NATIVE(n) (((n) << 1) | 1)
-#define FROM_NATIVE(n) ((n) >> 1)
+#define TO_NATIVE(n) ((Object *)((((intptr_t)(n)) << 1) | 1))
+#define FROM_NATIVE(n) (((intptr_t)(n)) >> 1)
 #define IS_NATIVE(n) (((intptr_t)(n)) & 1)
 
 #define WORD_SIZE (sizeof(NativeInteger))

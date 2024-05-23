@@ -17,7 +17,6 @@ static Object *eval_literal(expr_t *expr) {
 
 static Object *eval_send(expr_t *expr) {
   Object *receiver = eval(expr->send.receiver);
-  assert(receiver != NULL);
 
   if (expr->send.selector->type != EXPR_IDENTIFIER) {
     panic("Expected selector of send expression to be an identifier.");
@@ -36,6 +35,18 @@ static Object *eval_send(expr_t *expr) {
   return send_args(receiver, selector, &args);
 }
 
+static Object *eval_binary_send(expr_t *expr) {
+  if (expr->binary_send.selector->type != EXPR_IDENTIFIER) {
+    panic("Expected selector of binary send expression to be an identifier.");
+  }
+
+  Object *receiver = eval(expr->binary_send.left);
+  Object *other = eval(expr->binary_send.right);
+  char *selector = expr->binary_send.selector->identifier.name;
+
+  return send(receiver, selector, other);
+}
+
 Object *eval(expr_t *expr) {
   Object *result = NULL;
 
@@ -47,6 +58,11 @@ Object *eval(expr_t *expr) {
   case EXPR_SEND:
     result = eval_send(expr);
     break;
+
+  case EXPR_BINARY_SEND:
+    result = eval_binary_send(expr);
+    break;
+
 
   default:
     info("Eval of %d not implemented", expr->type);
