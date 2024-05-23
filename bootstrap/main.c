@@ -4,7 +4,7 @@
 #include "lang.h"
 #include "object.h"
 
-char *repl_read() {
+static char *repl_read() {
   char *line = NULL;
   size_t n = 0;
 
@@ -18,7 +18,7 @@ char *repl_read() {
   return line;
 }
 
-expr_t *repl_parse(char *input) {
+static expr_t *repl_parse(char *input) {
   parser_t parser;
 
   expr_t *expr = parser_parse_expression(&parser, input);
@@ -29,26 +29,22 @@ expr_t *repl_parse(char *input) {
     return NULL;
   }
 
-  return expr;
-}
-
-expr_t *repl_eval(expr_t *expr, World *world) {
-  return expr;
-}
-
-
-void repl_print(expr_t *expr) {
   expr_dump(expr);
-  free(expr);
-
-  putchar('\n');
+  return expr;
 }
 
-void repl(World *world) {
-  char *input;
-  expr_t *expr, *result;
+static Object *repl_eval(expr_t *expr) {
+  return eval(expr);
+}
 
-  printf("DAS//compute REPL.\nWrite 'quit' to exit.\n");
+static void repl_print(Object *obj) {
+  send(send(obj, "inspect"), "println");
+}
+
+static void repl() {
+  char *input;
+  expr_t *expr;
+  Object *result;
 
   while (1) {
     printf("> ");
@@ -61,19 +57,21 @@ void repl(World *world) {
       continue;
     }
 
-    result = repl_eval(expr, world);
+    result = repl_eval(expr);
     if (!result) {
       continue;
     }
-    repl_print(expr);
+    repl_print(result);
   }
 }
 
 int main() {
-  World world;
-  world_bootstrap(&world);
+  world_bootstrap();
 
-  repl(&world);
+  Object *hw = world_make_string("DAS//compute REPL.\nWrite 'quit' to exit.");
+  send(hw, "println");
+
+  repl();
 
   return 0;
 }

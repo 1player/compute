@@ -78,4 +78,5 @@ static void dump(int indent, expr_t *expr) {
 
 void expr_dump(expr_t *expr) {
   dump(0, expr);
+  putchar('\n');
 }

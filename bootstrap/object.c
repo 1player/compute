@@ -19,6 +19,17 @@
     _a < _b ? _a : _b;       \
 })
 
+// Globals
+VTable *vtable_vt;
+VTable *object_vt;
+VTable *string_vt;
+VTable *native_integer_vt;
+VTable *tuple_vt;
+VTable *world_vt;
+World *world;
+
+//
+
 VTable *vtable_delegated(VTable *self, size_t object_size) {
   VTable *child = (VTable *)malloc(sizeof(VTable));
   child->_vtable = self ? self->_vtable : NULL;
@@ -67,7 +78,31 @@ void *vtable_lookup(VTable *self, char *selector) {
     }
   }
 
+  // If nothing found, check the parent
+  if (self->parent) {
+    return vtable_lookup(self->parent, selector);
+  }
+
   return NULL;
+}
+
+Object *object_inspect(Object *self) {
+  char *buf;
+  asprintf(&buf, "<Object %p>", self);
+  return world_make_string(buf);
+}
+
+Object *native_integer_inspect(NativeInteger self) {
+  char *buf;
+  asprintf(&buf, "%ld", FROM_NATIVE(self));
+  return world_make_string(buf);
+}
+
+String *string_new(char *buf) {
+  String *str = (String *)vtable_allocate(string_vt);
+  str->buf = buf;
+  str->len = strlen(buf);
+  return str;
 }
 
 String *string_concat(String *self, String *other) {
@@ -81,18 +116,41 @@ String *string_concat(String *self, String *other) {
   return str;
 }
 
+Object *string_inspect(String *self) {
+  char *buf = malloc(self->len + 2 + 1);
+  buf[0] = '"';
+  memcpy(&buf[1], self->buf, self->len);
+  buf[self->len + 1] = '"';
+  buf[self->len + 2] = 0;
+
+  return world_make_string(buf);
+}
+
 void string_println(String *self) {
   fwrite(self->buf, self->len, 1, stdout);
   fputc('\n', stdout);
 }
 
+static bool string_equals_(String *self, String *other) {
+  if (self->len != other->len) {
+    return false;
+  }
+
+  return strncmp(self->buf, other->buf, self->len) == 0;
+}
+
 //
 
-#define VA_NARGS(...) ((int)(sizeof((Object *[]){ __VA_ARGS__ })/sizeof(Object *)))
-#define send(RCV, SEL, ...) _send((Object *)(RCV), (SEL), VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)
-
 Object *_send(Object *receiver, char *selector, int n_args, ...) {
-  void *ptr = vtable_lookup(receiver->_vtable, selector);
+  VTable *vtable;
+
+  if (IS_NATIVE(receiver)) {
+    vtable = native_integer_vt;
+  } else {
+    vtable = receiver->_vtable;
+  }
+
+  void *ptr = vtable_lookup(vtable, selector);
   if (!ptr) {
     fprintf(stderr, "Object %p doesn't know how to respond to '%s'\n", receiver, selector);
     return NULL;
@@ -126,28 +184,88 @@ Object *_send(Object *receiver, char *selector, int n_args, ...) {
 
 //
 
-void world_bootstrap(World *world) {
-  VTable *vtable_vt = vtable_delegated(NULL, sizeof(VTable));
+void world_init(World *world) {
+  array_init(&world->entries);
+}
+
+Object *world_lookup(char *name) {
+  size_t name_len = strlen(name);
+
+  for (int i = 0; i < world->entries.size; i++) {
+    Tuple *t = world->entries.elements[i];
+    String *entry_name = (String *)t->left;
+    if (entry_name->len == name_len && strncmp(entry_name->buf, name, name_len) == 0) {
+      return t->right;
+    }
+  }
+
+  return NULL;
+}
+
+Object *world_make_tuple(Object *left, Object *right) {
+  Tuple *t = (Tuple *)vtable_allocate(tuple_vt);
+  t->left = left;
+  t->right = right;
+  return (Object *)t;
+}
+
+Object *world_make_string(char *str) {
+  String *s = (String *)vtable_allocate(string_vt);
+  s->buf = str;
+  s->len = strlen(str);
+  return (Object *)s;
+}
+
+Object *world_make_native_integer(intptr_t number) {
+  return (Object *)TO_NATIVE(number);
+}
+
+void world_add(World *world, String *name, Object *obj) {
+  // Check if an entry with this name already exists
+  for (int i = 0; i < world->entries.size; i++) {
+    Tuple *t = world->entries.elements[i];
+    if (string_equals_(name, (String *)t->left)) {
+      t->right = obj;
+      return;
+    }
+  }
+
+  Object *t = world_make_tuple((Object *)name, (Object *)obj);
+  array_append(&world->entries, t);
+}
+
+void world_bootstrap() {
+  // VTable
+  vtable_vt = vtable_delegated(NULL, sizeof(VTable));
   vtable_vt->_vtable = vtable_vt;
 
-  VTable *object_vt = vtable_delegated(NULL, sizeof(Object));
+  // Object
+  object_vt = vtable_delegated(NULL, sizeof(Object));
   object_vt->_vtable = vtable_vt;
   vtable_vt->parent = object_vt;
 
-  VTable *string_vt = vtable_delegated(vtable_vt, sizeof(String));
+  // String
+  string_vt = vtable_delegated(vtable_vt, sizeof(String));
+  vtable_add_method(string_vt, string_new("println"), string_println);
+  vtable_add_method(string_vt, string_new("concat"), string_concat);
+  vtable_add_method(string_vt, string_new("inspect"), string_inspect);
 
-  String *_make_string(char *buf) {
-    String *str = (String *)vtable_allocate(string_vt);
-    str->buf = buf;
-    str->len = strlen(buf);
-    return str;
-  }
+  // Additional methods on Object
+  vtable_add_method(object_vt, string_new("inspect"), object_inspect);
 
-  vtable_add_method(string_vt, _make_string("println"), string_println);
-  vtable_add_method(string_vt, _make_string("concat"), string_concat);
+  // NativeInteger
+  native_integer_vt = vtable_delegated(vtable_vt, 0);
+  vtable_add_method(native_integer_vt, string_new("inspect"), native_integer_inspect);
 
-  String *h = _make_string("Hello, ");
-  String *w = _make_string("world!");
-  String *hw = (String *)send(h, "concat", (Object *)w);
-  send(hw, "println");
+  // Tuple
+  tuple_vt = vtable_delegated(vtable_vt, sizeof(Tuple));
+
+  // World
+  world_vt = vtable_delegated(vtable_vt, sizeof(World));
+  world = (World *)vtable_allocate(world_vt);
+
+  world_init(world);
+  world_add(world, string_new("VTable"), (Object *)vtable_vt);
+  world_add(world, string_new("Object"), (Object *)object_vt);
+  world_add(world, string_new("String"), (Object *)string_vt);
 }

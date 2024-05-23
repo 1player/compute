@@ -109,6 +109,7 @@ expr_t *parser_parse_expression(parser_t *parser, const char *input);
 //
 
 void panic(char *msg, ...);
+void info(char *msg, ...);
 void error(char *file, int line, char *msg, va_list args);
 
 #endif

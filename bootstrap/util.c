@@ -18,6 +18,17 @@ void panic(char *msg, ...) {
   exit(1);
 }
 
+void info(char *msg, ...) {
+  va_list args;
+
+  va_start(args, msg);
+  vfprintf(stderr, msg, args);
+  va_end(args);
+
+  fputc('\n', stderr);
+}
+
+
 void error(char *file, int line, char *msg, va_list args) {
   fprintf(stderr, "%s:%d: ", file, line);
   vfprintf(stderr, msg, args);
