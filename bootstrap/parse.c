@@ -189,71 +189,99 @@ expr_t *atom(parser_t *parser) {
   return expr;
 }
 
-static expr_t *expression_(parser_t *parser, int min_precedence) {
-  (void)min_precedence;
-
-  expr_t *left = atom(parser);
-  if (!left) {
-    return NULL;
-  }
-
-  expr_t *expr = NULL, *right;
-
-  enum token_type tok = peek(parser);
+// Return precedence when left-associative, -precedence otherwise
+static int operator_precedence(enum token_type tok) {
   switch ((char)tok) {
   case '+':
   case '-':
+    return 1;
+
   case '*':
   case '/':
-    advance(parser);
+    return 2;
+  }
+  return 0;
+}
 
-    if (!(right = expression(parser))) {
-        return NULL;
-    }
-
-    expr = new_expr(EXPR_BINARY_SEND);
-    expr->binary_send.left = left;
-    expr->binary_send.right = right;
-    expr->binary_send.selector = new_expr(EXPR_IDENTIFIER);
-    asprintf(&expr->binary_send.selector->identifier.name, "%c", (char)tok);
-    break;
-
-  case '(':
-    expr = new_expr(EXPR_SEND);
-    expr->send.receiver = new_expr(EXPR_SELF);
-    expr->send.selector = left;
-    if (!(expr->send.args = send_args(parser))) {
-      return NULL;
-    }
-
-    break;
-
-  case '.':
-    advance(parser);
-
-    tok = peek(parser);
-    if (tok != TOKEN_ID) {
-      parser_error(parser, "Expected identifier, got %s", token_explain(&parser->cur_token));
-      return NULL;
-    }
-
-    expr = new_expr(EXPR_SEND);
-    expr->send.receiver = left;
-    expr->send.selector = new_expr(EXPR_IDENTIFIER);
-    expr->send.selector->identifier.name = parser->cur_token.value_id;
-
-    advance(parser);
-    if (!(expr->send.args = send_args(parser))) {
-      return NULL;
-    }
-
-    break;
-
-  default:
-    expr = left;
+static expr_t *expression_(parser_t *parser, int min_precedence) {
+  expr_t *result = atom(parser);
+  if (!result) {
+    return NULL;
   }
 
-  return expr;
+  expr_t *expr, *right;
+  enum token_type tok;
+
+  while ((tok = peek(parser)) != TOKEN_EOF) {
+    int p = operator_precedence(tok);
+    int precedence = abs(p);
+    bool left_associative = p > 0;
+
+    if (precedence < min_precedence) {
+      break;
+    }
+
+    int next_min_precedence = left_associative ? precedence + 1 : precedence;
+
+    switch ((char)tok) {
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+      advance(parser);
+
+      if (!(right = expression_(parser, next_min_precedence))) {
+        return NULL;
+      }
+
+      expr = new_expr(EXPR_BINARY_SEND);
+      expr->binary_send.left = result;
+      expr->binary_send.right = right;
+      expr->binary_send.selector = new_expr(EXPR_IDENTIFIER);
+      asprintf(&expr->binary_send.selector->identifier.name, "%c", (char)tok);
+
+      result = expr;
+      break;
+
+    case '(':
+      expr = new_expr(EXPR_SEND);
+      expr->send.receiver = new_expr(EXPR_SELF);
+      expr->send.selector = result;
+      if (!(expr->send.args = send_args(parser))) {
+        return NULL;
+      }
+      result = expr;
+      break;
+
+    case '.':
+      advance(parser);
+
+      tok = peek(parser);
+      if (tok != TOKEN_ID) {
+        parser_error(parser, "Expected identifier, got %s", token_explain(&parser->cur_token));
+        return NULL;
+      }
+
+      expr = new_expr(EXPR_SEND);
+      expr->send.receiver = result;
+      expr->send.selector = new_expr(EXPR_IDENTIFIER);
+      expr->send.selector->identifier.name = parser->cur_token.value_id;
+
+      advance(parser);
+      if (!(expr->send.args = send_args(parser))) {
+        return NULL;
+      }
+
+      result = expr;
+      break;
+
+    default:
+      goto end;
+    }
+  }
+
+ end:
+  return result;
 }
 
 expr_t *expression(parser_t *parser) {
