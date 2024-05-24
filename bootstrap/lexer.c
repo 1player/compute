@@ -105,6 +105,7 @@ int lexer_next(lexer_t *lexer, token_t *token) {
   case '*':
   case '/':
   case '.':
+  case '=':
     token->type = c;
     lexer->ptr++;
     break;

@@ -71,6 +71,13 @@ static void dump(int indent, expr_t *expr) {
     ln(indent); emit("}");
     break;
 
+  case EXPR_ASSIGNMENT:
+    emit("Assignment {");
+    ln(indent + 1); emit("left: "); dump(indent + 1, expr->assignment.left);
+    ln(indent + 1); emit("right: "); dump(indent + 1, expr->assignment.right);
+    ln(indent); emit("}");
+    break;
+
   default:
     panic("Not implemented dump of expr->type %d", expr->type);
   }

@@ -192,14 +192,22 @@ expr_t *atom(parser_t *parser) {
 // Return precedence when left-associative, -precedence otherwise
 static int operator_precedence(enum token_type tok) {
   switch ((char)tok) {
+  case '=':
+    return -1;
+
   case '+':
   case '-':
-    return 1;
+    return 2;
 
   case '*':
   case '/':
-    return 2;
+    return 3;
+
+  case '(':
+  case '.':
+    return 100;
   }
+
   return 0;
 }
 
@@ -239,6 +247,20 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
       expr->binary_send.right = right;
       expr->binary_send.selector = new_expr(EXPR_IDENTIFIER);
       asprintf(&expr->binary_send.selector->identifier.name, "%c", (char)tok);
+
+      result = expr;
+      break;
+
+    case '=':
+      advance(parser);
+
+      if (!(right = expression_(parser, next_min_precedence))) {
+        return NULL;
+      }
+
+      expr = new_expr(EXPR_ASSIGNMENT);
+      expr->assignment.left = result;
+      expr->assignment.right = right;
 
       result = expr;
       break;
