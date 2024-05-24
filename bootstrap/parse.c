@@ -80,6 +80,7 @@ static expr_t *new_expr(enum expr_type type) {
 }
 
 expr_t *expression(parser_t *parser);
+static expr_t *expression_(parser_t *parser, int min_precedence);
 
 expr_t *subexpression(parser_t *parser) {
   if (expect_and_advance(parser, '(')) {
@@ -145,34 +146,34 @@ void end_of_expression(parser_t *parser) {
   }
 }
 
-expr_t *expression(parser_t *parser) {
-  expr_t *left = NULL;
+expr_t *atom(parser_t *parser) {
+  expr_t *expr = NULL;
 
   enum token_type tok = peek(parser);
   switch ((int)tok) {
   case '(':
-    left = subexpression(parser);
+    expr = subexpression(parser);
     break;
 
   case TOKEN_NUMBER:
-    left = new_expr(EXPR_LITERAL);
-    left->literal.type = LITERAL_NUMBER;
-    left->literal.value_number = parser->cur_token.value_number;
+    expr = new_expr(EXPR_LITERAL);
+    expr->literal.type = LITERAL_NUMBER;
+    expr->literal.value_number = parser->cur_token.value_number;
 
     advance(parser);
     break;
 
   case TOKEN_STRING:
-    left = new_expr(EXPR_LITERAL);
-    left->literal.type = LITERAL_STRING;
-    left->literal.value_string = parser->cur_token.value_string;
+    expr = new_expr(EXPR_LITERAL);
+    expr->literal.type = LITERAL_STRING;
+    expr->literal.value_string = parser->cur_token.value_string;
 
     advance(parser);
     break;
 
   case TOKEN_ID:
-    left = new_expr(EXPR_IDENTIFIER);
-    left->identifier.name = parser->cur_token.value_id;
+    expr = new_expr(EXPR_IDENTIFIER);
+    expr->identifier.name = parser->cur_token.value_id;
 
     advance(parser);
     break;
@@ -183,12 +184,22 @@ expr_t *expression(parser_t *parser) {
     free(e);
 
     synchronize(parser);
+  }
+
+  return expr;
+}
+
+static expr_t *expression_(parser_t *parser, int min_precedence) {
+  (void)min_precedence;
+
+  expr_t *left = atom(parser);
+  if (!left) {
     return NULL;
   }
 
   expr_t *expr = NULL, *right;
-  tok = peek(parser);
 
+  enum token_type tok = peek(parser);
   switch ((char)tok) {
   case '+':
   case '-':
@@ -243,6 +254,10 @@ expr_t *expression(parser_t *parser) {
   }
 
   return expr;
+}
+
+expr_t *expression(parser_t *parser) {
+  return expression_(parser, 0);
 }
 
 static toplevel_t *toplevel(parser_t *parser) {
