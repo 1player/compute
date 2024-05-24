@@ -11,6 +11,12 @@ Object *tuple_new(Object *left, Object *right);
 
 bool string_equals(String *self, String *other);
 
+typedef struct Scope Scope;
+VTable *scope_bootstrap();
+Scope *scope_new();
+Scope *scope_add(Scope *self, String *name, Object *obj);
+Object *scope_lookup(Scope *self, char *name);
+
 extern method_descriptor_t String_methods[];
 extern method_descriptor_t NativeInteger_methods[];
 

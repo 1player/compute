@@ -12,8 +12,6 @@ VTable *object_vt;
 VTable *string_vt;
 VTable *native_integer_vt;
 VTable *tuple_vt;
-VTable *world_vt;
-World *world;
 
 //
 
@@ -56,6 +54,13 @@ void vtable_add_method(VTable *self, String *name, void *ptr) {
   self->names[self->len] = name;
   self->ptrs[self->len] = ptr;
   self->len++;
+}
+
+void vtable_add_method_descriptors(VTable *self, method_descriptor_t *desc) {
+  while (desc && desc->name) {
+    vtable_add_method(self, (String *)string_new(desc->name), desc->fn);
+    desc++;
+  }
 }
 
 void *vtable_lookup(VTable *self, char *selector) {
@@ -147,46 +152,7 @@ Object *send_args(Object *receiver, char *selector, array_t *args) {
 
 //
 
-void world_init(World *world) {
-  array_init(&world->entries);
-}
-
-Object *world_lookup(char *name) {
-  size_t name_len = strlen(name);
-
-  for (int i = 0; i < world->entries.size; i++) {
-    Tuple *t = world->entries.elements[i];
-    String *entry_name = (String *)t->left;
-    if (entry_name->len == name_len && strncmp(entry_name->buf, name, name_len) == 0) {
-      return t->right;
-    }
-  }
-
-  return NULL;
-}
-
-void world_add(World *world, String *name, Object *obj) {
-  // Check if an entry with this name already exists
-  for (int i = 0; i < world->entries.size; i++) {
-    Tuple *t = world->entries.elements[i];
-    if (string_equals(name, (String *)t->left)) {
-      t->right = obj;
-      return;
-    }
-  }
-
-  Object *t = tuple_new((Object *)name, (Object *)obj);
-  array_append(&world->entries, t);
-}
-
-static void add_method_descriptors(VTable *vt, method_descriptor_t *desc) {
-  while (desc && desc->name) {
-    vtable_add_method(vt, (String *)string_new(desc->name), desc->fn);
-    desc++;
-  }
-}
-
-void world_bootstrap() {
+Object *bootstrap() {
   // VTable
   vtable_vt = vtable_delegated(NULL, sizeof(VTable));
   vtable_vt->_vtable = vtable_vt;
@@ -198,24 +164,33 @@ void world_bootstrap() {
 
   // String
   string_vt = vtable_delegated(vtable_vt, sizeof(String));
-  add_method_descriptors(string_vt, String_methods);
+  vtable_add_method_descriptors(string_vt, String_methods);
 
   // Additional methods on Object
-  add_method_descriptors(object_vt, Object_methods);
+  vtable_add_method_descriptors(object_vt, Object_methods);
 
   // NativeInteger
   native_integer_vt = vtable_delegated(vtable_vt, 0);
-  add_method_descriptors(native_integer_vt, NativeInteger_methods);
+  vtable_add_method_descriptors(native_integer_vt, NativeInteger_methods);
 
   // Tuple
   tuple_vt = vtable_delegated(vtable_vt, sizeof(Tuple));
 
-  /* // World
-   * world_vt = vtable_delegated(vtable_vt, sizeof(World));
-   * world = (World *)vtable_allocate(world_vt);
-   *
-   * world_init(world);
-   * world_add(world, string_new("VTable"), (Object *)vtable_vt);
-   * world_add(world, string_new("Object"), (Object *)object_vt);
-   * world_add(world, string_new("String"), (Object *)string_vt); */
+  VTable *scope_vt = scope_bootstrap();
+  Scope *global_scope = scope_new();
+
+#define GLOBAL_SCOPE(name, obj) scope_add(global_scope, (String *)string_new((name)), (Object *)(obj))
+
+  // Classes
+  GLOBAL_SCOPE("VTable", vtable_vt);
+  GLOBAL_SCOPE("Object", object_vt);
+  GLOBAL_SCOPE("String", string_vt);
+  GLOBAL_SCOPE("NativeInteger", native_integer_vt);
+  GLOBAL_SCOPE("Tuple", tuple_vt);
+  GLOBAL_SCOPE("Scope", scope_vt);
+
+  // Singletons
+  GLOBAL_SCOPE("scope", global_scope);
+
+  return (Object *)global_scope;
 }

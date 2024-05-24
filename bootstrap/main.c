@@ -64,7 +64,7 @@ static void repl() {
 }
 
 int main() {
-  world_bootstrap();
+  bootstrap();
 
   Object *hw = string_new("DAS//compute REPL.\nWrite 'quit' to exit.");
   send(hw, "println");
