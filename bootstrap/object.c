@@ -9,9 +9,7 @@
 
 VTable *vtable_vt;
 VTable *object_vt;
-VTable *string_vt;
 VTable *native_integer_vt;
-VTable *tuple_vt;
 
 //
 
@@ -34,10 +32,13 @@ Object *vtable_allocate(VTable *self) {
   return obj;
 }
 
-void vtable_add_method(VTable *self, String *name, void *ptr) {
+void vtable_add_method(VTable *self, Object *name_, void *ptr) {
+  String *name = (String *)name_;
+
   // Replace an existing entry, if any
   for (size_t i = 0; i < self->len; i++) {
-    if (strncmp(name->buf, self->names[i]->buf, name->len) == 0) {
+    String *this_name = (String *)self->names[i];
+    if (strncmp(name->buf, this_name->buf, name->len) == 0) {
       self->ptrs[i] = ptr;
       return;
     }
@@ -51,21 +52,22 @@ void vtable_add_method(VTable *self, String *name, void *ptr) {
     self->cap = new_cap;
   }
 
-  self->names[self->len] = name;
+  self->names[self->len] = name_;
   self->ptrs[self->len] = ptr;
   self->len++;
 }
 
 void vtable_add_method_descriptors(VTable *self, method_descriptor_t *desc) {
   while (desc && desc->name) {
-    vtable_add_method(self, (String *)string_new(desc->name), desc->fn);
+    vtable_add_method(self, string_new(desc->name), desc->fn);
     desc++;
   }
 }
 
 void *vtable_lookup(VTable *self, char *selector) {
   for (size_t i = 0; i < self->len; i++) {
-    if (strncmp(selector, self->names[i]->buf, self->names[i]->len) == 0) {
+    String *this_name = (String *)self->names[i];
+    if (strncmp(selector, this_name->buf, this_name->len) == 0) {
       return self->ptrs[i];
     }
   }
@@ -153,30 +155,24 @@ Object *send_args(Object *receiver, char *selector, array_t *args) {
 //
 
 Object *bootstrap() {
-  // VTable
+  // Core objects: VTable, Object and String
   vtable_vt = vtable_delegated(NULL, sizeof(VTable));
   vtable_vt->_vtable = vtable_vt;
 
-  // Object
   object_vt = vtable_delegated(NULL, sizeof(Object));
   object_vt->_vtable = vtable_vt;
   vtable_vt->parent = object_vt;
 
-  // String
-  string_vt = vtable_delegated(vtable_vt, sizeof(String));
-  vtable_add_method_descriptors(string_vt, String_methods);
+  VTable *string_vt = string_bootstrap();
 
-  // Additional methods on Object
   vtable_add_method_descriptors(object_vt, Object_methods);
 
-  // NativeInteger
-  native_integer_vt = vtable_delegated(vtable_vt, 0);
-  vtable_add_method_descriptors(native_integer_vt, NativeInteger_methods);
-
-  // Tuple
-  tuple_vt = vtable_delegated(vtable_vt, sizeof(Tuple));
-
+  // Builtins
+  native_integer_vt = native_integer_bootstrap();
+  VTable *tuple_vt = tuple_bootstrap();
   VTable *scope_vt = scope_bootstrap();
+
+  // Global scope
   Scope *global_scope = scope_new();
 
 #define GLOBAL_SCOPE(name, obj) scope_add(global_scope, (String *)string_new((name)), (Object *)(obj))

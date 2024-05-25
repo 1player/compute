@@ -2,7 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "object.h"
+#include "builtins.h"
+
+static VTable *string_vt;
 
 Object *string_new(char *buf) {
   String *str = (String *)vtable_allocate(string_vt);
@@ -52,3 +54,10 @@ method_descriptor_t String_methods[] = {
   { .name = "inspect", .fn = string_inspect },
   { NULL },
 };
+
+VTable *string_bootstrap() {
+  string_vt = vtable_delegated(vtable_vt, sizeof(String));
+  vtable_add_method_descriptors(string_vt, String_methods);
+
+  return string_vt;
+}

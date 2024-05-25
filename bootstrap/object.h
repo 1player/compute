@@ -15,11 +15,6 @@ typedef intptr_t NativeInteger;
 
 #define WORD_SIZE (sizeof(NativeInteger))
 
-typedef struct String {
-  VTable *_vtable;
-  size_t len;
-  char *buf;
-} String;
 
 typedef struct VTable {
   VTable *_vtable;
@@ -28,7 +23,7 @@ typedef struct VTable {
 
   size_t len;
   size_t cap;
-  String **names;
+  Object **names;
   void **ptrs;
 } VTable;
 
@@ -36,26 +31,16 @@ typedef struct Object {
   VTable *_vtable;
 } Object;
 
-typedef struct Tuple {
-  VTable *_vtable;
-  Object *left;
-  Object *right;
-} Tuple;
-
 typedef struct {
   char *name;
   void *fn;
 } method_descriptor_t;
 
 extern VTable *vtable_vt;
-extern VTable *object_vt;
-extern VTable *string_vt;
-extern VTable *native_integer_vt;
-extern VTable *tuple_vt;
 
 VTable *vtable_delegated(VTable *self, size_t object_size);
 Object *vtable_allocate(VTable *self);
-void vtable_add_method(VTable *self, String *name, void *ptr);
+void vtable_add_method(VTable *self, Object *name, void *ptr);
 void vtable_add_method_descriptors(VTable *self, method_descriptor_t *desc);
 void *vtable_lookup(VTable *self, char *selector);
 
