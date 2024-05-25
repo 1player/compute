@@ -26,10 +26,13 @@ typedef struct {
   int capacity;
 } array_t;
 
-void array_init(array_t *ary);
+array_t *array_new();
+array_t *array_new_with_capacity(int capacity);
 void array_append(array_t *ary, void *el);
 void array_resize(array_t *ary, int new_capacity);
 void *array_pop_start(array_t *ary);
+void array_fill(array_t *ary, void *el);
+void array_free(array_t *ary);
 
 //
 

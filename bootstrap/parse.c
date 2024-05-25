@@ -111,8 +111,7 @@ static array_t *send_args(parser_t *parser) {
     return NULL;
   }
 
-  array_t *args = calloc(1, sizeof(array_t));
-  array_init(args);
+  array_t *args = array_new();
 
   while (peek(parser) != ')') {
     expr_t *arg = expression(parser);
@@ -338,12 +337,12 @@ static toplevel_t *toplevel(parser_t *parser) {
   expr_t *expr;
 
   toplevel_t *top = calloc(1, sizeof(toplevel_t));
-  array_init(&top->exprs);
+  top->exprs = array_new();
 
   while (peek(parser) != TOKEN_EOF) {
     if ((expr = expression(parser))) {
       end_of_expression(parser);
-      array_append(&top->exprs, expr);
+      array_append(top->exprs, expr);
     } else {
       break;
     }

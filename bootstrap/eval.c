@@ -26,16 +26,18 @@ static Object *eval_send(expr_t *expr, Object *scope_) {
   }
 
   // Eval each argument
-  array_t args;
-  array_init(&args);
+  array_t *args = array_new_with_capacity(expr->send.args->size);
 
   for (int i = 0; i < expr->send.args->size; i++) {
     Object *arg = eval(expr->send.args->elements[i], scope_);
-    array_append(&args, arg);
+    array_append(args, arg);
   }
 
   char *selector = expr->send.selector->identifier.name;
-  return send_args(receiver, selector, &args);
+  Object *ret = send_args(receiver, selector, args);
+  array_free(args);
+
+  return ret;
 }
 
 static Object *eval_binary_send(expr_t *expr, Object *scope_) {

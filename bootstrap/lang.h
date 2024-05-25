@@ -89,7 +89,7 @@ void expr_dump(expr_t *expr);
 //
 
 typedef struct toplevel_t {
-  array_t exprs;
+  array_t *exprs;
 } toplevel_t;
 
 toplevel_t *parse_toplevel(char *file, char *input);
