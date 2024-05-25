@@ -20,7 +20,7 @@ typedef struct Scope Scope;
 VTable *scope_bootstrap();
 Scope *scope_new();
 Scope *scope_add(Scope *self, String *name, Object *obj);
-Object *scope_lookup(Scope *self, char *name);
+Object *scope_lookup(Scope *self, char *name, bool *found);
 
 //
 

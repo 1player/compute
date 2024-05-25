@@ -49,7 +49,7 @@ Object *bootstrap();
 Object *_send(Object *receiver, char *selector, int n_args, ...);
 Object *send_args(Object *receiver, char *selector, array_t *args);
 
-Object *eval(expr_t *expr);
+Object *eval(expr_t *expr, Object *scope);
 
 #define VA_NARGS(...) ((int)(sizeof((Object *[]){ __VA_ARGS__ })/sizeof(Object *)))
 #define send(RCV, SEL, ...) _send((Object *)(RCV), (SEL), VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)

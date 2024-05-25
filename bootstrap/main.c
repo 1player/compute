@@ -31,15 +31,15 @@ static expr_t *repl_parse(char *input) {
   return expr;
 }
 
-static Object *repl_eval(expr_t *expr) {
-  return eval(expr);
+static Object *repl_eval(expr_t *expr, Object *scope) {
+  return eval(expr, scope);
 }
 
 static void repl_print(Object *obj) {
   send(send(obj, "inspect"), "println");
 }
 
-static void repl() {
+static void repl(Object *scope) {
   char *input;
   expr_t *expr;
   Object *result;
@@ -55,7 +55,7 @@ static void repl() {
       continue;
     }
 
-    result = repl_eval(expr);
+    result = repl_eval(expr, scope);
     if (!result) {
       continue;
     }
@@ -64,12 +64,12 @@ static void repl() {
 }
 
 int main() {
-  bootstrap();
+  Object *global_scope = bootstrap();
 
   Object *hw = string_new("DAS//compute REPL.\nWrite 'quit' to exit.");
   send(hw, "println");
 
-  repl();
+  repl(global_scope);
 
   return 0;
 }

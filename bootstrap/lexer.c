@@ -23,15 +23,11 @@ int lexer_create(lexer_t *lexer, char *file, char *input) {
 static int lexer_read_identifier(lexer_t *lexer, char **value) {
   char *start = lexer->ptr;
 
-  if (!(*lexer->ptr >= 'a' && *lexer->ptr <= 'z')) {
-    lexer_error(lexer, "Expected identifier");
-    return 1;
-  }
-
   for (;;) {
-    lexer->ptr++;
+    char c = *++lexer->ptr;
 
-    if (*lexer->ptr >= 'a' && *lexer->ptr <= 'z') {
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') || (c == '_')) {
       continue;
     } else {
       break;
@@ -84,6 +80,8 @@ int lexer_next(lexer_t *lexer, token_t *token) {
     break;
 
   case 'a' ... 'z':
+  case 'A' ... 'Z':
+  case '_':
     token->type = TOKEN_ID;
     if (lexer_read_identifier(lexer, &token->value_id)) {
       return 1;
