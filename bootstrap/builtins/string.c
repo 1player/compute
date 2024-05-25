@@ -14,11 +14,15 @@ Object *string_new(char *buf) {
 }
 
 bool string_equals(String *self, String *other) {
-  if (self->len != other->len) {
-    return false;
+  return strequals(self->buf, self->len, other->buf, other->len);
+}
+
+static Object *string_equals_(String *self, String *other) {
+  if (string_equals(self, other)) {
+    return singleton_true;
   }
 
-  return strncmp(self->buf, other->buf, self->len) == 0;
+  return singleton_false;
 }
 
 Object *string_concat(String *self, String *other) {
@@ -49,6 +53,7 @@ Object *string_println(String *self) {
 }
 
 method_descriptor_t String_methods[] = {
+  { .name = "==",      .fn = string_equals_ },
   { .name = "concat",  .fn = string_concat },
   { .name = "println", .fn = string_println },
   { .name = "inspect", .fn = string_inspect },

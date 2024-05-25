@@ -67,6 +67,15 @@ static int lexer_read_number(lexer_t *lexer, int *number) {
   return 0;
 }
 
+char peek(lexer_t *lexer, int ahead) {
+  char *ptr = lexer->ptr;
+  while (ahead-- > 0 && *ptr != '\0') {
+    ptr++;
+  }
+
+  return *ptr;
+}
+
 int lexer_next(lexer_t *lexer, token_t *token) {
   // Skip whitespace
   while (*lexer->ptr == ' ' || *lexer->ptr == '\t') {
@@ -95,6 +104,21 @@ int lexer_next(lexer_t *lexer, token_t *token) {
     }
     break;
 
+  case '=':
+    if (peek(lexer, 1) == '=') {
+      if (peek(lexer, 2) == '=') {
+        token->type = TOKEN_IS;
+        lexer->ptr += 3;
+      } else {
+        token->type = TOKEN_EQUALS;
+        lexer->ptr += 2;
+      }
+    } else {
+      token->type = c;
+      lexer->ptr++;
+    }
+    break;
+
   case ',':
   case '(':
   case ')':
@@ -103,7 +127,6 @@ int lexer_next(lexer_t *lexer, token_t *token) {
   case '*':
   case '/':
   case '.':
-  case '=':
     token->type = c;
     lexer->ptr++;
     break;

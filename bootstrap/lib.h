@@ -2,7 +2,7 @@
 #define LIB_H
 
 #include <stdarg.h>
-
+#include <stdbool.h>
 
 #define max(a,b)             \
 ({                           \
@@ -36,5 +36,8 @@ void *array_pop_start(array_t *ary);
 void panic(const char *msg, ...);
 void info(const char *msg, ...);
 void error(const char *file, const int line, const char *msg, va_list args);
+
+bool strequals(char *a, size_t a_len, char *b, size_t b_len);
+
 
 #endif

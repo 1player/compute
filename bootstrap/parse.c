@@ -40,6 +40,14 @@ static char *token_explain(token_t *tok) {
   case TOKEN_NUMBER:
     asprintf(&e, "number '%d'", tok->value_number);
     break;
+
+  case TOKEN_EQUALS:
+    asprintf(&e, "==");
+    break;
+
+  case TOKEN_IS:
+    asprintf(&e, "===");
+    break;
   }
 
   return e;
@@ -191,17 +199,20 @@ expr_t *atom(parser_t *parser) {
 
 // Return precedence when left-associative, -precedence otherwise
 static int operator_precedence(enum token_type tok) {
-  switch ((char)tok) {
+  switch ((int)tok) {
   case '=':
-    return -1;
+    return -10;
+
+  case TOKEN_EQUALS:
+    return 20;
 
   case '+':
   case '-':
-    return 2;
+    return 30;
 
   case '*':
   case '/':
-    return 3;
+    return 40;
 
   case '(':
   case '.':
@@ -231,11 +242,13 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
 
     int next_min_precedence = left_associative ? precedence + 1 : precedence;
 
-    switch ((char)tok) {
+    switch ((int)tok) {
     case '+':
     case '-':
     case '*':
     case '/':
+    case TOKEN_EQUALS:
+    case TOKEN_IS:
       advance(parser);
 
       if (!(right = expression_(parser, next_min_precedence))) {
@@ -246,7 +259,18 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
       expr->binary_send.left = result;
       expr->binary_send.right = right;
       expr->binary_send.selector = new_expr(EXPR_IDENTIFIER);
-      asprintf(&expr->binary_send.selector->identifier.name, "%c", (char)tok);
+
+      char **name = &expr->binary_send.selector->identifier.name;
+      if (tok < 256) {
+        asprintf(name, "%c", (char)tok);
+      } else if (tok == TOKEN_EQUALS) {
+        asprintf(name, "==");
+      } else if (tok == TOKEN_IS) {
+        asprintf(name, "===");
+      } else {
+        panic("Unimplemented");
+      }
+
 
       result = expr;
       break;

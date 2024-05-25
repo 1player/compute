@@ -12,6 +12,8 @@ enum token_type {
   TOKEN_ID,
   TOKEN_STRING,
   TOKEN_NUMBER,
+  TOKEN_EQUALS, // ==
+  TOKEN_IS,     // ===
 };
 
 typedef struct token {

@@ -38,7 +38,7 @@ void vtable_add_method(VTable *self, Object *name_, void *ptr) {
   // Replace an existing entry, if any
   for (size_t i = 0; i < self->len; i++) {
     String *this_name = (String *)self->names[i];
-    if (strncmp(name->buf, this_name->buf, name->len) == 0) {
+    if (strequals(name->buf, name->len, this_name->buf, this_name->len)) {
       self->ptrs[i] = ptr;
       return;
     }
@@ -65,9 +65,11 @@ void vtable_add_method_descriptors(VTable *self, method_descriptor_t *desc) {
 }
 
 void *vtable_lookup(VTable *self, char *selector) {
+  size_t selector_len = strlen(selector);
+
   for (size_t i = 0; i < self->len; i++) {
     String *this_name = (String *)self->names[i];
-    if (strncmp(selector, this_name->buf, this_name->len) == 0) {
+    if (strequals(selector, selector_len, this_name->buf, this_name->len)) {
       return self->ptrs[i];
     }
   }
@@ -86,7 +88,16 @@ Object *object_inspect(Object *self) {
   return string_new(buf);
 }
 
+Object *object_is(Object *self, Object *other) {
+  if (self == other) {
+    return singleton_true;
+  }
+  return singleton_false;
+}
+
 method_descriptor_t Object_methods[] = {
+  { .name = "==",      .fn = object_is },
+  { .name = "===",     .fn = object_is },
   { .name = "inspect", .fn = object_inspect },
   { NULL },
 };
@@ -96,7 +107,12 @@ Object *nil_inspect(Object *self) {
   return string_new("<nil>");
 }
 
+Object *nil_is(Object *self) {
+  return self == NULL ? singleton_true : singleton_false;
+}
+
 method_descriptor_t Nil_methods[] = {
+  { .name = "===",     .fn = nil_is },
   { .name = "inspect", .fn = nil_inspect },
   { NULL },
 };

@@ -37,7 +37,7 @@ Object *scope_lookup(Scope *self, char *name, bool *found) {
   for (int i = 0; i < self->entries.size; i++) {
     Tuple *t = self->entries.elements[i];
     String *entry_name = (String *)t->left;
-    if (entry_name->len == name_len && strncmp(entry_name->buf, name, name_len) == 0) {
+    if (strequals(name, name_len, entry_name->buf, entry_name->len)) {
       *found = true;
       return t->right;
     }
