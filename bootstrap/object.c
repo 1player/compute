@@ -171,7 +171,7 @@ Object *send_args(Object *receiver, char *selector, array_t *args) {
 //
 
 Object *bootstrap() {
-  // Core objects: VTable, Object, String, nil
+  // The Piumarta loop
   vtable_vt = vtable_delegated(NULL, sizeof(VTable));
   vtable_vt->_vtable = vtable_vt;
 
@@ -179,6 +179,7 @@ Object *bootstrap() {
   object_vt->_vtable = vtable_vt;
   vtable_vt->parent = object_vt;
 
+  // Core objects: String, nil
   VTable *string_vt = string_bootstrap();
 
   vtable_add_method_descriptors(object_vt, Object_methods);
@@ -190,6 +191,7 @@ Object *bootstrap() {
   native_integer_vt = native_integer_bootstrap();
   VTable *tuple_vt = tuple_bootstrap();
   VTable *scope_vt = scope_bootstrap();
+  boolean_bootstrap();
 
   // Global scope
   Scope *global_scope = scope_new();
@@ -207,6 +209,8 @@ Object *bootstrap() {
   // Singletons
   GLOBAL_SCOPE("scope", global_scope);
   GLOBAL_SCOPE("nil", NULL);
+  GLOBAL_SCOPE("true", singleton_true);
+  GLOBAL_SCOPE("false", singleton_false);
 
   return (Object *)global_scope;
 }

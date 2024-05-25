@@ -38,4 +38,10 @@ Object *tuple_new(Object *left, Object *right);
 Object *native_integer_new(intptr_t number);
 VTable *native_integer_bootstrap();
 
+//
+
+VTable *boolean_bootstrap();
+extern Object *singleton_true;
+extern Object *singleton_false;
+
 #endif
