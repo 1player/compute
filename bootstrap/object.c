@@ -8,7 +8,7 @@
 #include "builtins.h"
 
 VTable *vtable_vt;
-VTable *object_vt;
+VTable *nil_vt;
 VTable *native_integer_vt;
 
 //
@@ -91,19 +91,37 @@ method_descriptor_t Object_methods[] = {
   { NULL },
 };
 
+Object *nil_inspect(Object *self) {
+  (void)self;
+  return string_new("<nil>");
+}
+
+method_descriptor_t Nil_methods[] = {
+  { .name = "inspect", .fn = nil_inspect },
+  { NULL },
+};
+
 
 //
 
 static void *bind(Object *receiver, char *selector) {
   VTable *vtable;
 
-  if (IS_NATIVE(receiver)) {
+  if (receiver == NULL) {
+    vtable = nil_vt;
+  } else if (IS_NATIVE(receiver)) {
     vtable = native_integer_vt;
   } else {
     vtable = receiver->_vtable;
   }
 
-  return vtable_lookup(vtable, selector);
+  void *ptr = vtable_lookup(vtable, selector);
+  if (!ptr) {
+    String *i = (String *)send(receiver, "inspect");
+    fprintf(stderr, "bind: %*s doesn't know how to respond to '%s'\n", (int)i->len, i->buf, selector);
+  }
+
+  return ptr;
 }
 
 #define DISPATCH(ret, ptr, n_args, next_arg) do {    \
@@ -124,7 +142,6 @@ static void *bind(Object *receiver, char *selector) {
 Object *_send(Object *receiver, char *selector, int n_args, ...) {
   void *ptr = bind(receiver, selector);
   if (!ptr) {
-    fprintf(stderr, "Object %p doesn't know how to respond to '%s'\n", receiver, selector);
     return NULL;
   }
 
@@ -141,7 +158,6 @@ Object *_send(Object *receiver, char *selector, int n_args, ...) {
 Object *send_args(Object *receiver, char *selector, array_t *args) {
   void *ptr = bind(receiver, selector);
   if (!ptr) {
-    fprintf(stderr, "Object %p doesn't know how to respond to '%s'\n", receiver, selector);
     return NULL;
   }
 
@@ -155,17 +171,20 @@ Object *send_args(Object *receiver, char *selector, array_t *args) {
 //
 
 Object *bootstrap() {
-  // Core objects: VTable, Object and String
+  // Core objects: VTable, Object, String, nil
   vtable_vt = vtable_delegated(NULL, sizeof(VTable));
   vtable_vt->_vtable = vtable_vt;
 
-  object_vt = vtable_delegated(NULL, sizeof(Object));
+  VTable *object_vt = vtable_delegated(NULL, sizeof(Object));
   object_vt->_vtable = vtable_vt;
   vtable_vt->parent = object_vt;
 
   VTable *string_vt = string_bootstrap();
 
   vtable_add_method_descriptors(object_vt, Object_methods);
+
+  nil_vt = vtable_delegated(NULL, 0);
+  vtable_add_method_descriptors(nil_vt, Nil_methods);
 
   // Builtins
   native_integer_vt = native_integer_bootstrap();
@@ -187,6 +206,7 @@ Object *bootstrap() {
 
   // Singletons
   GLOBAL_SCOPE("scope", global_scope);
+  GLOBAL_SCOPE("nil", NULL);
 
   return (Object *)global_scope;
 }

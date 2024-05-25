@@ -56,9 +56,6 @@ static void repl(Object *scope) {
     }
 
     result = repl_eval(expr, scope);
-    if (!result) {
-      continue;
-    }
     repl_print(result);
   }
 }
