@@ -104,7 +104,7 @@ method_descriptor_t Object_methods[] = {
 
 Object *nil_inspect(Object *self) {
   (void)self;
-  return string_new("<nil>");
+  return string_new("nil");
 }
 
 Object *nil_is(Object *self) {

@@ -8,9 +8,9 @@ static VTable *boolean_vt;
 
 Object *boolean_inspect(Object *self) {
   if (self == singleton_true) {
-    return string_new("<true>");
+    return string_new("true");
   } else if (self == singleton_false) {
-    return string_new("<false>");
+    return string_new("false");
   }
 
   panic("Called boolean_inspect on something that ain't a Boolean");
