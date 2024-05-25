@@ -26,7 +26,6 @@ void array_free(array_t *ary) {
   free(ary);
 }
 
-
 void array_append(array_t *ary, void *el) {
   if (ary->size == ary->capacity) {
     array_resize(ary, ary->size == 0 ? 2 : (ary->size * 2));

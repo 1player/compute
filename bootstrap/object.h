@@ -23,7 +23,7 @@ typedef struct VTable {
 
   size_t len;
   size_t cap;
-  Object **names;
+  Object **selectors;
   void **ptrs;
 } VTable;
 
@@ -37,12 +37,13 @@ typedef struct {
 } method_descriptor_t;
 
 extern VTable *vtable_vt;
+extern VTable *object_vt;
 
 VTable *vtable_delegated(VTable *self, size_t object_size);
 Object *vtable_allocate(VTable *self);
 void vtable_add_method(VTable *self, Object *name, void *ptr);
 void vtable_add_method_descriptors(VTable *self, method_descriptor_t *desc);
-void *vtable_lookup(VTable *self, char *selector);
+void *vtable_lookup(VTable *self, Object *selector);
 
 Object *bootstrap();
 

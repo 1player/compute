@@ -36,6 +36,28 @@ void array_free(array_t *ary);
 
 //
 
+typedef struct string_pool {
+  char *buf;
+  size_t size;
+  size_t cap;
+} string_pool_t;
+
+typedef struct string_table {
+  string_pool_t pool;
+  array_t *pointers;
+  array_t *values;
+  size_t count;
+} string_table_t;
+
+typedef size_t location_t;
+
+string_table_t *string_table_new();
+bool string_table_lookup(string_table_t *t, const char *key, location_t *loc);
+void *string_table_get(string_table_t *t, location_t loc);
+void string_table_set(string_table_t *t, location_t loc, const char *str, void *value);
+
+//
+
 void panic(const char *msg, ...);
 void info(const char *msg, ...);
 void error(const char *file, const int line, const char *msg, va_list args);

@@ -61,7 +61,7 @@ method_descriptor_t String_methods[] = {
 };
 
 VTable *string_bootstrap() {
-  string_vt = vtable_delegated(vtable_vt, sizeof(String));
+  string_vt = vtable_delegated(object_vt, sizeof(String));
   vtable_add_method_descriptors(string_vt, String_methods);
 
   return string_vt;

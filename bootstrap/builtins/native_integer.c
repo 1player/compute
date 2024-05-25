@@ -40,7 +40,7 @@ static method_descriptor_t NativeInteger_methods[] = {
 };
 
 VTable *native_integer_bootstrap() {
-  native_integer_vt = vtable_delegated(vtable_vt, 0);
+  native_integer_vt = vtable_delegated(object_vt, 0);
   vtable_add_method_descriptors(native_integer_vt, NativeInteger_methods);
 
   return native_integer_vt;

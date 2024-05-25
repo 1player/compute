@@ -56,7 +56,7 @@ static Object *eval_identifier(expr_t *expr, Object *scope_) {
   Scope *scope = (Scope *)scope_;
   bool found = false;
 
-  Object *obj = scope_lookup(scope, expr->identifier.name, &found);
+  Object *obj = scope_lookup(scope, symbol_intern(expr->identifier.name), &found);
   if (!found) {
     panic("%s not found in current scope", expr->identifier.name);
   }

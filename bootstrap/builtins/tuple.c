@@ -14,7 +14,7 @@ static method_descriptor_t Tuple_methods[] = {
 };
 
 VTable *tuple_bootstrap() {
-  tuple_vt = vtable_delegated(vtable_vt, sizeof(Tuple));
+  tuple_vt = vtable_delegated(object_vt, sizeof(Tuple));
   vtable_add_method_descriptors(tuple_vt, Tuple_methods);
 
   return tuple_vt;

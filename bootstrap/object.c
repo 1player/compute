@@ -8,6 +8,7 @@
 #include "builtins.h"
 
 VTable *vtable_vt;
+VTable *object_vt;
 VTable *nil_vt;
 VTable *native_integer_vt;
 
@@ -20,7 +21,7 @@ VTable *vtable_delegated(VTable *self, size_t object_size) {
   child->object_size = object_size;
   child->len = 0;
   child->cap = 0;
-  child->names = NULL;
+  child->selectors = NULL;
   child->ptrs = NULL;
 
   return child;
@@ -32,13 +33,10 @@ Object *vtable_allocate(VTable *self) {
   return obj;
 }
 
-void vtable_add_method(VTable *self, Object *name_, void *ptr) {
-  String *name = (String *)name_;
-
+void vtable_add_method(VTable *self, Object *selector, void *ptr) {
   // Replace an existing entry, if any
   for (size_t i = 0; i < self->len; i++) {
-    String *this_name = (String *)self->names[i];
-    if (strequals(name->buf, name->len, this_name->buf, this_name->len)) {
+    if (self->selectors[i] == selector) {
       self->ptrs[i] = ptr;
       return;
     }
@@ -47,29 +45,26 @@ void vtable_add_method(VTable *self, Object *name_, void *ptr) {
   // Resize arrays, if necessary
   if (self->len == self->cap) {
     size_t new_cap = max(self->cap * 2, 2u);
-    self->names = realloc(self->names, new_cap * sizeof(*self->names));
+    self->selectors = realloc(self->selectors, new_cap * sizeof(*self->selectors));
     self->ptrs = realloc(self->ptrs, new_cap * sizeof(*self->ptrs));
     self->cap = new_cap;
   }
 
-  self->names[self->len] = name_;
+  self->selectors[self->len] = selector;
   self->ptrs[self->len] = ptr;
   self->len++;
 }
 
 void vtable_add_method_descriptors(VTable *self, method_descriptor_t *desc) {
   while (desc && desc->name) {
-    vtable_add_method(self, string_new(desc->name), desc->fn);
+    vtable_add_method(self, (Object *)symbol_intern(desc->name), desc->fn);
     desc++;
   }
 }
 
-void *vtable_lookup(VTable *self, char *selector) {
-  size_t selector_len = strlen(selector);
-
+void *vtable_lookup(VTable *self, Object *selector) {
   for (size_t i = 0; i < self->len; i++) {
-    String *this_name = (String *)self->names[i];
-    if (strequals(selector, selector_len, this_name->buf, this_name->len)) {
+    if (self->selectors[i] == selector) {
       return self->ptrs[i];
     }
   }
@@ -120,7 +115,7 @@ method_descriptor_t Nil_methods[] = {
 
 //
 
-static void *bind(Object *receiver, char *selector) {
+static void *bind(Object *receiver, Object *selector) {
   VTable *vtable;
 
   if (receiver == NULL) {
@@ -133,8 +128,10 @@ static void *bind(Object *receiver, char *selector) {
 
   void *ptr = vtable_lookup(vtable, selector);
   if (!ptr) {
+    Symbol *selector_ = (Symbol *)selector;
     String *i = (String *)send(receiver, "inspect");
-    fprintf(stderr, "bind: %*s doesn't know how to respond to '%s'\n", (int)i->len, i->buf, selector);
+    fprintf(stderr, "bind: %*s doesn't know how to respond to '%s'\n",
+            (int)i->len, i->buf, selector_->string);
   }
 
   return ptr;
@@ -156,7 +153,7 @@ static void *bind(Object *receiver, char *selector) {
   } while(0)
 
 Object *_send(Object *receiver, char *selector, int n_args, ...) {
-  void *ptr = bind(receiver, selector);
+  void *ptr = bind(receiver, symbol_intern(selector));
   if (!ptr) {
     return NULL;
   }
@@ -172,7 +169,7 @@ Object *_send(Object *receiver, char *selector, int n_args, ...) {
 }
 
 Object *send_args(Object *receiver, char *selector, array_t *args) {
-  void *ptr = bind(receiver, selector);
+  void *ptr = bind(receiver, symbol_intern(selector));
   if (!ptr) {
     return NULL;
   }
@@ -187,7 +184,7 @@ Object *send_args(Object *receiver, char *selector, array_t *args) {
 //
 
 Object *bootstrap() {
-  // The Piumarta loop
+  // The core objects: VTable, Object and Symbol
   vtable_vt = vtable_delegated(NULL, sizeof(VTable));
   vtable_vt->_vtable = vtable_vt;
 
@@ -195,7 +192,9 @@ Object *bootstrap() {
   object_vt->_vtable = vtable_vt;
   vtable_vt->parent = object_vt;
 
-  // Core objects: String, nil
+  symbol_bootstrap();
+
+  // Core objects: Symbol, String, nil
   VTable *string_vt = string_bootstrap();
 
   vtable_add_method_descriptors(object_vt, Object_methods);
@@ -212,7 +211,7 @@ Object *bootstrap() {
   // Global scope
   Scope *global_scope = scope_new();
 
-#define GLOBAL_SCOPE(name, obj) scope_add(global_scope, (String *)string_new((name)), (Object *)(obj))
+#define GLOBAL_SCOPE(name, obj) scope_add(global_scope, symbol_intern(name), (Object *)(obj))
 
   // Classes
   GLOBAL_SCOPE("VTable", vtable_vt);

@@ -3,6 +3,16 @@
 
 #include "object.h"
 
+typedef struct Symbol {
+  VTable *_vtable;
+  char *string;
+} Symbol;
+
+VTable *symbol_bootstrap();
+Object *symbol_intern(char *string);
+
+//
+
 typedef struct String {
   VTable *_vtable;
   size_t len;
@@ -13,14 +23,15 @@ VTable *string_bootstrap();
 Object *string_new(char *buf);
 bool string_equals(String *self, String *other);
 
+
 //
 
 typedef struct Scope Scope;
 
 VTable *scope_bootstrap();
 Scope *scope_new();
-Scope *scope_add(Scope *self, String *name, Object *obj);
-Object *scope_lookup(Scope *self, char *name, bool *found);
+Scope *scope_add(Scope *self, Object *name, Object *obj);
+Object *scope_lookup(Scope *self, Object *name, bool *found);
 
 //
 
