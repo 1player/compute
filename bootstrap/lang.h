@@ -14,6 +14,8 @@ enum token_type {
   TOKEN_NUMBER,
   TOKEN_EQUALS, // ==
   TOKEN_IS,     // ===
+  TOKEN_IF,     // if
+  TOKEN_ELSE,   // else
 };
 
 typedef struct token {

@@ -48,6 +48,14 @@ static char *token_explain(token_t *tok) {
   case TOKEN_IS:
     asprintf(&e, "===");
     break;
+
+  case TOKEN_IF:
+    asprintf(&e, "if");
+    break;
+
+  case TOKEN_ELSE:
+    asprintf(&e, "else");
+    break;
   }
 
   return e;

@@ -5,6 +5,16 @@
 
 #include "lang.h"
 
+static struct {
+  char *keyword;
+  enum token_type type;
+} keyword_table[] = {
+  { "if",   TOKEN_IF },
+  { "else", TOKEN_ELSE },
+};
+
+static const int n_keywords = sizeof(keyword_table) / sizeof(keyword_table[0]);
+
 static void lexer_error(lexer_t *lexer, char *msg, ...) {
   va_list args;
   va_start(args, msg);
@@ -20,8 +30,20 @@ int lexer_create(lexer_t *lexer, char *file, char *input) {
   return 0;
 }
 
-static int lexer_read_identifier(lexer_t *lexer, char **value) {
-  char *start = lexer->ptr;
+static int match_keyword(char *word, size_t word_len, token_t *token) {
+  for (int i = 0; i < n_keywords; i++) {
+    char *keyword = keyword_table[i].keyword;
+    if (strequals(keyword, strlen(keyword), word, word_len)) {
+      token->type = keyword_table[i].type;
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+static void lexer_read_word(lexer_t *lexer, token_t *token) {
+  char *word = lexer->ptr;
 
   for (;;) {
     char c = *++lexer->ptr;
@@ -34,10 +56,14 @@ static int lexer_read_identifier(lexer_t *lexer, char **value) {
     }
   }
 
-  // We're pointing to the first character that's not part of the
-  // identifier
-  *value = strndup(start, lexer->ptr - start);
-  return 0;
+  size_t word_len = lexer->ptr - word;
+  if (match_keyword(word, word_len, token)) {
+    return;
+  }
+
+  token->type = TOKEN_ID;
+  token->value_id = strndup(word, word_len);
+  return;
 }
 
 static int lexer_read_string(lexer_t *lexer, char **value) {
@@ -76,6 +102,7 @@ char peek(lexer_t *lexer, int ahead) {
   return *ptr;
 }
 
+
 int lexer_next(lexer_t *lexer, token_t *token) {
   // Skip whitespace
   while (*lexer->ptr == ' ' || *lexer->ptr == '\t') {
@@ -91,10 +118,7 @@ int lexer_next(lexer_t *lexer, token_t *token) {
   case 'a' ... 'z':
   case 'A' ... 'Z':
   case '_':
-    token->type = TOKEN_ID;
-    if (lexer_read_identifier(lexer, &token->value_id)) {
-      return 1;
-    }
+    lexer_read_word(lexer, token);
     break;
 
   case '0' ... '9':
@@ -119,6 +143,8 @@ int lexer_next(lexer_t *lexer, token_t *token) {
     }
     break;
 
+  case '{':
+  case '}':
   case ',':
   case '(':
   case ')':
