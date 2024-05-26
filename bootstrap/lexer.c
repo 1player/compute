@@ -171,6 +171,8 @@ int lexer_next(lexer_t *lexer, token_t *token) {
     }
 
     __attribute__ ((fallthrough));
+
+  case ';':
   case '{':
   case '}':
   case ',':
@@ -199,6 +201,7 @@ int lexer_next(lexer_t *lexer, token_t *token) {
 
   default:
     lexer_error(lexer, "Unexpected character '%c'", c);
+    lexer->ptr++;
     return 1;
   }
 

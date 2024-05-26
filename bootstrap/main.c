@@ -20,33 +20,30 @@ static char *repl_read() {
   return line;
 }
 
-static expr_t *repl_parse(char *input) {
+static void repl_parse_eval_and_print(char *input, Object *scope) {
   parser_t parser;
-  if (parser_init(&parser, "repl", input) == 0) {
-    expr_t *expr = parser_next(&parser);
-    free(input);
+  if (parser_init(&parser, "repl", input) != 0) {
+    goto end;
+  }
 
+  expr_t *expr;
+  Object *obj = NULL;
+
+  while ((expr = parser_next(&parser))) {
     if (expr) {
       expr_dump(expr);
     }
 
-    return expr;
+    obj = eval(expr, scope);
+    send(send(obj, "inspect"), "println");
   }
 
-  return NULL;
-}
-
-static Object *repl_eval(expr_t *expr, Object *scope) {
-  return eval(expr, scope);
-}
-
-static void repl_print(Object *obj) {
-  send(send(obj, "inspect"), "println");
+ end:
+  free(input);
 }
 
 static void repl(Object *scope) {
   char *input;
-  expr_t *expr;
   Object *result;
 
   Object *hw = string_new("DAS//compute REPL.\nWrite 'quit' to exit.");
@@ -54,17 +51,13 @@ static void repl(Object *scope) {
 
   while (1) {
     printf("> ");
+
     input = repl_read();
     if (!input) {
       break;
     }
-    expr = repl_parse(input);
-    if (!expr) {
-      continue;
-    }
 
-    result = repl_eval(expr, scope);
-    repl_print(result);
+    repl_parse_eval_and_print(input, scope);
   }
 }
 

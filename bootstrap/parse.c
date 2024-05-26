@@ -164,8 +164,12 @@ static array_t *send_args(parser_t *parser) {
 }
 
 void synchronize(parser_t *parser) {
-  // TODO
-  (void)parser;
+  enum token_type tok;
+
+  do {
+    tok = peek(parser);
+    advance(parser);
+  } while (tok != TOKEN_NEWLINE && tok != TOKEN_EOF);
 }
 
 void end_of_expression(parser_t *parser, bool in_block) {
@@ -390,14 +394,14 @@ int parser_init(parser_t *parser, char *file, char *input) {
   return 0;
 }
 
-void skip_newlines(parser_t *parser) {
-  while (peek(parser) == TOKEN_NEWLINE) {
+void skip_empty(parser_t *parser) {
+  while (peek(parser) == TOKEN_NEWLINE || peek(parser) == ';') {
     advance(parser);
   }
 }
 
 expr_t *parser_next(parser_t *parser) {
-  skip_newlines(parser);
+  skip_empty(parser);
 
   if (peek(parser) == TOKEN_EOF) {
     return NULL;

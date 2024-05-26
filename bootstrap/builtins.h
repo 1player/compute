@@ -16,7 +16,7 @@ Object *symbol_intern(char *string);
 typedef struct Scope Scope;
 
 void scope_bootstrap();
-Scope *scope_new();
+Scope *scope_new(Scope *parent);
 Scope *scope_add(Scope *self, Object *name, Object *obj);
 Object *scope_lookup(Scope *self, Object *name, bool *found);
 

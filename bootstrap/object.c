@@ -201,7 +201,7 @@ Object *bootstrap() {
   // Global scope
   scope_bootstrap();
 
-  Scope *global_scope = scope_new();
+  Scope *global_scope = scope_new(NULL);
   scope_add(global_scope, symbol_intern("VTable"), (Object *)vtable_vt);
   scope_add(global_scope, symbol_intern("Object"), (Object *)object_vt);
   scope_add(global_scope, symbol_intern("scope"), (Object *)global_scope);
