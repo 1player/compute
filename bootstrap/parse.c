@@ -5,12 +5,35 @@
 
 #include "lang.h"
 
-typedef struct {
-  lexer_t lexer;
-  token_t cur_token;
-  token_t prev_token;
-  bool had_errors;
-} parser_t;
+expr_t *expression(parser_t *parser);
+static expr_t *expression_(parser_t *parser, int min_precedence);
+
+
+// Return precedence when left-associative, -precedence otherwise
+static int operator_precedence(enum token_type tok) {
+  switch ((int)tok) {
+  case '=':
+    return -10;
+
+  case TOKEN_EQUALS:
+    return 20;
+
+  case '+':
+  case '-':
+    return 30;
+
+  case '*':
+  case '/':
+    return 40;
+
+  case '(':
+  case '.':
+    return 100;
+  }
+
+  return 0;
+}
+
 
 static char *token_explain(token_t *tok) {
   char *e = NULL;
@@ -94,9 +117,6 @@ static expr_t *new_expr(enum expr_type type) {
   expr->type = type;
   return expr;
 }
-
-expr_t *expression(parser_t *parser);
-static expr_t *expression_(parser_t *parser, int min_precedence);
 
 expr_t *subexpression(parser_t *parser) {
   if (expect_and_advance(parser, '(')) {
@@ -243,30 +263,6 @@ expr_t *atom(parser_t *parser) {
   return expr;
 }
 
-// Return precedence when left-associative, -precedence otherwise
-static int operator_precedence(enum token_type tok) {
-  switch ((int)tok) {
-  case '=':
-    return -10;
-
-  case TOKEN_EQUALS:
-    return 20;
-
-  case '+':
-  case '-':
-    return 30;
-
-  case '*':
-  case '/':
-    return 40;
-
-  case '(':
-  case '.':
-    return 100;
-  }
-
-  return 0;
-}
 
 static expr_t *expression_(parser_t *parser, int min_precedence) {
   expr_t *result = atom(parser);
@@ -380,25 +376,7 @@ expr_t *expression(parser_t *parser) {
   return expression_(parser, 0);
 }
 
-static toplevel_t *toplevel(parser_t *parser) {
-  expr_t *expr;
-
-  toplevel_t *top = calloc(1, sizeof(toplevel_t));
-  top->exprs = array_new();
-
-  while (peek(parser) != TOKEN_EOF) {
-    if ((expr = expression(parser))) {
-      end_of_expression(parser, false);
-      array_append(top->exprs, expr);
-    } else {
-      break;
-    }
-  }
-
-  return top;
-}
-
-static int parser_init(parser_t *parser, char *file, char *input) {
+int parser_init(parser_t *parser, char *file, char *input) {
   if (lexer_create(&parser->lexer, file, input)) {
     return 1;
   }
@@ -412,27 +390,23 @@ static int parser_init(parser_t *parser, char *file, char *input) {
   return 0;
 }
 
-toplevel_t *parse_toplevel(char *file, char *input) {
-  parser_t parser;
-  if (parser_init(&parser, file, input)) {
-    return NULL;
+void skip_newlines(parser_t *parser) {
+  while (peek(parser) == TOKEN_NEWLINE) {
+    advance(parser);
   }
-
-  toplevel_t *top = toplevel(&parser);
-  if (parser.had_errors) {
-    return NULL;
-  }
-  return top;
 }
 
-expr_t *parse_expression(char *input) {
-  parser_t parser;
-  if (parser_init(&parser, "expr", input)) {
+expr_t *parser_next(parser_t *parser) {
+  skip_newlines(parser);
+
+  if (peek(parser) == TOKEN_EOF) {
     return NULL;
   }
 
-  expr_t *expr = expression(&parser);
-  if (parser.had_errors) {
+  expr_t *expr = expression(parser);
+  end_of_expression(parser, false);
+
+  if (parser->had_errors) {
     return NULL;
   }
   return expr;

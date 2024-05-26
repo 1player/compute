@@ -95,12 +95,16 @@ void expr_dump(expr_t *expr);
 
 //
 
-typedef struct toplevel_t {
-  array_t *exprs;
-} toplevel_t;
+typedef struct {
+  lexer_t lexer;
+  token_t cur_token;
+  token_t prev_token;
+  bool had_errors;
+} parser_t;
 
-toplevel_t *parse_toplevel(char *file, char *input);
-expr_t *parse_expression(char *input);
+int parser_init(parser_t *parser, char *file, char *input);
+expr_t *parser_next(parser_t *parser);
+
 
 
 #endif
