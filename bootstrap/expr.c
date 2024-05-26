@@ -78,6 +78,12 @@ static void dump(int indent, expr_t *expr) {
     ln(indent); emit("}");
     break;
 
+  case EXPR_BLOCK:
+    emit("Block {");
+    ln(indent + 1); dump_array(indent + 1, expr->block.exprs);
+    ln(indent); emit("}");
+    break;
+
   default:
     panic("Not implemented dump of expr->type %d", expr->type);
   }

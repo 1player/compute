@@ -34,6 +34,11 @@ void *array_pop_start(array_t *ary);
 void array_fill(array_t *ary, void *el);
 void array_free(array_t *ary);
 
+#define array_foreach(ary, type, name) \
+  int _fi = 0;                         \
+  type name;                                                        \
+  while (_fi < (ary)->size && (name = (type)ary->elements[_fi++]))
+
 //
 
 typedef struct string_pool {

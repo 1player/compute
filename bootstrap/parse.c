@@ -148,17 +148,52 @@ void synchronize(parser_t *parser) {
   (void)parser;
 }
 
-void end_of_expression(parser_t *parser) {
-  switch(peek(parser)) {
+void end_of_expression(parser_t *parser, bool in_block) {
+  switch((int)peek(parser)) {
+  case '}':
+    if (in_block) {
+      return;
+    } else {
+      break;
+    }
+
+  case ';':
   case TOKEN_EOF:
   case TOKEN_NEWLINE:
     advance(parser);
-    break;
+    return;
 
   default:
-    parser_error(parser, "Expected end of expression, instead got %s", token_explain(&parser->cur_token));
-    synchronize(parser);
+    break;
   }
+
+  parser_error(parser, "Expected end of expression, instead got %s", token_explain(&parser->cur_token));
+  synchronize(parser);
+}
+
+expr_t *block(parser_t *parser) {
+  if (expect_and_advance(parser, '{')) {
+    return NULL;
+  }
+
+  expr_t *block_expr = new_expr(EXPR_BLOCK);
+  block_expr->block.exprs = array_new();
+
+  expr_t *expr;
+  while (peek(parser) != '}') {
+    if ((expr = expression(parser))) {
+      end_of_expression(parser, true);
+      array_append(block_expr->block.exprs, expr);
+    } else {
+      return NULL;
+    }
+  }
+
+  if (expect_and_advance(parser, '}')) {
+    return NULL;
+  }
+
+  return block_expr;
 }
 
 expr_t *atom(parser_t *parser) {
@@ -168,6 +203,10 @@ expr_t *atom(parser_t *parser) {
   switch ((int)tok) {
   case '(':
     expr = subexpression(parser);
+    break;
+
+  case '{':
+    expr = block(parser);
     break;
 
   case TOKEN_NUMBER:
@@ -349,7 +388,7 @@ static toplevel_t *toplevel(parser_t *parser) {
 
   while (peek(parser) != TOKEN_EOF) {
     if ((expr = expression(parser))) {
-      end_of_expression(parser);
+      end_of_expression(parser, false);
       array_append(top->exprs, expr);
     } else {
       break;

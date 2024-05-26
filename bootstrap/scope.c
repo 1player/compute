@@ -3,14 +3,16 @@
 
 typedef struct Scope {
   VTable *_vtable;
+  Scope *parent;
   array_t *keys;
   array_t *values;
 } Scope;
 
 static VTable *scope_vt;
 
-Scope *scope_new() {
+Scope *scope_new(Scope *parent) {
   Scope *scope = (Scope *)vtable_allocate(scope_vt);
+  scope->parent = parent;
   scope->keys = array_new();
   scope->values = array_new();
   return scope;
@@ -36,6 +38,10 @@ Object *scope_lookup(Scope *self, Object *name, bool *found) {
       *found = true;
       return self->values->elements[i];
     }
+  }
+
+  if (self->parent) {
+    return scope_lookup(self->parent, name, found);
   }
 
   *found = false;

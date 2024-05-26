@@ -51,6 +51,7 @@ enum expr_type {
   EXPR_BINARY_SEND,
   EXPR_SEND,
   EXPR_ASSIGNMENT,
+  EXPR_BLOCK,
 };
 
 typedef struct expr_t {
@@ -83,6 +84,10 @@ typedef struct expr_t {
       struct expr_t *left;
       struct expr_t *right;
     } assignment;
+
+    struct {
+      array_t *exprs;
+    } block;
   };
 } expr_t;
 

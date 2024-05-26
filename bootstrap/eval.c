@@ -64,6 +64,18 @@ static Object *eval_identifier(expr_t *expr, Object *scope_) {
   return obj;
 }
 
+static Object *eval_block(expr_t *expr, Object *scope_) {
+  Scope *scope = (Scope *)scope_;
+  Scope *inner_scope = scope_new(scope);
+
+  Object *obj = NULL;
+  array_foreach(expr->block.exprs, expr_t *, inner_expr) {
+    obj = eval(inner_expr, (Object *)inner_scope);
+  }
+
+  return obj;
+}
+
 Object *eval(expr_t *expr, Object *scope) {
   Object *result = NULL;
 
@@ -82,6 +94,10 @@ Object *eval(expr_t *expr, Object *scope) {
 
   case EXPR_IDENTIFIER:
     result = eval_identifier(expr, scope);
+    break;
+
+  case EXPR_BLOCK:
+    result = eval_block(expr, scope);
     break;
 
   default:
