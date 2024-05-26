@@ -33,6 +33,11 @@ static void dump_array(int indent, array_t *ary) {
 }
 
 static void dump(int indent, expr_t *expr) {
+  if (!expr) {
+    emit("NULL");
+    return;
+  }
+
   switch (expr->type) {
   case EXPR_LITERAL:
     switch (expr->literal.type) {
@@ -82,6 +87,14 @@ static void dump(int indent, expr_t *expr) {
   case EXPR_BLOCK:
     emit("Block {");
     ln(indent + 1); dump_array(indent + 1, expr->block.exprs);
+    ln(indent); emit("}");
+    break;
+
+  case EXPR_CONDITIONAL:
+    emit("Conditional {");
+    ln(indent + 1); emit("test: "); dump(indent + 1, expr->conditional.test);
+    ln(indent + 1); emit("if_block: "); dump(indent + 1, expr->conditional.if_block);
+    ln(indent + 1); emit("else_expr: "); dump(indent + 1, expr->conditional.else_expr);
     ln(indent); emit("}");
     break;
 

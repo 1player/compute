@@ -100,6 +100,21 @@ static Object *eval_block(expr_t *expr, Object *scope_) {
   return obj;
 }
 
+static Object *eval_conditional(expr_t *expr, Object *scope_) {
+  Object *test = eval(expr->conditional.test, scope_);
+
+  // Only nil and `false` are false
+  if (test != NULL && test != singleton_false) {
+    return eval(expr->conditional.if_block, scope_);
+  }
+
+  if (expr->conditional.else_expr) {
+    return eval(expr->conditional.else_expr, scope_);
+  }
+
+  return NULL;
+}
+
 Object *eval(expr_t *expr, Object *scope) {
   Object *result = NULL;
 
@@ -126,6 +141,10 @@ Object *eval(expr_t *expr, Object *scope) {
 
   case EXPR_BLOCK:
     result = eval_block(expr, scope);
+    break;
+
+  case EXPR_CONDITIONAL:
+    result = eval_conditional(expr, scope);
     break;
 
   default:

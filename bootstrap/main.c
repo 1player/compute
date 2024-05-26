@@ -44,7 +44,6 @@ static void repl_parse_eval_and_print(char *input, Object *scope) {
 
 static void repl(Object *scope) {
   char *input;
-  Object *result;
 
   Object *hw = string_new("DAS//compute REPL.\nWrite 'quit' to exit.");
   send(hw, "println");

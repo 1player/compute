@@ -5,6 +5,12 @@
 
 #include "lang.h"
 
+#define TRY(e) do {     \
+    if (!(e)) {         \
+      return NULL;      \
+    }                   \
+} while(0)
+
 expr_t *expression(parser_t *parser);
 static expr_t *expression_(parser_t *parser, int min_precedence);
 
@@ -225,6 +231,32 @@ expr_t *block(parser_t *parser) {
   return block_expr;
 }
 
+expr_t *conditional(parser_t *parser) {
+  if (expect_and_advance(parser, TOKEN_IF)) {
+    return NULL;
+  }
+
+  expr_t *expr = new_expr(EXPR_CONDITIONAL);
+  TRY(expr->conditional.test = expression(parser));
+  TRY(expr->conditional.if_block = block(parser));
+
+  if (peek(parser) == TOKEN_ELSE) {
+    advance(parser);
+
+    // Expect a block or another if (else if)
+    if (peek(parser) == '{') {
+      TRY(expr->conditional.else_expr = block(parser));
+    } else if (peek(parser) == TOKEN_IF) {
+      TRY(expr->conditional.else_expr = conditional(parser));
+    } else {
+      parser_error(parser, "Expected 'if' or a block to follow the 'else' keyword");
+      return NULL;
+    }
+  }
+
+  return expr;
+}
+
 expr_t *atom(parser_t *parser) {
   expr_t *expr = NULL;
 
@@ -236,6 +268,10 @@ expr_t *atom(parser_t *parser) {
 
   case '{':
     expr = block(parser);
+    break;
+
+  case TOKEN_IF:
+    expr = conditional(parser);
     break;
 
   case TOKEN_NUMBER:

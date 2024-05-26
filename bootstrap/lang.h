@@ -53,6 +53,7 @@ enum expr_type {
   EXPR_SEND,
   EXPR_ASSIGNMENT,
   EXPR_BLOCK,
+  EXPR_CONDITIONAL,
 };
 
 typedef struct expr_t {
@@ -90,6 +91,12 @@ typedef struct expr_t {
     struct {
       array_t *exprs;
     } block;
+
+    struct {
+      struct expr_t *test;
+      struct expr_t *if_block;
+      struct expr_t *else_expr;
+    } conditional;
   };
 } expr_t;
 
