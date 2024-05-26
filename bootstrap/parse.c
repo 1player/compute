@@ -12,6 +12,7 @@ static expr_t *expression_(parser_t *parser, int min_precedence);
 // Return precedence when left-associative, -precedence otherwise
 static int operator_precedence(enum token_type tok) {
   switch ((int)tok) {
+  case TOKEN_DEFINE:
   case '=':
     return -10;
 
@@ -62,6 +63,10 @@ static char *token_explain(token_t *tok) {
 
   case TOKEN_NUMBER:
     asprintf(&e, "number '%d'", tok->value_number);
+    break;
+
+  case TOKEN_DEFINE:
+    asprintf(&e, ":=");
     break;
 
   case TOKEN_EQUALS:
@@ -321,6 +326,7 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
       result = expr;
       break;
 
+    case TOKEN_DEFINE:
     case '=':
       advance(parser);
 
@@ -329,6 +335,7 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
       }
 
       expr = new_expr(EXPR_ASSIGNMENT);
+      expr->assignment.definition = tok == TOKEN_DEFINE;
       expr->assignment.left = result;
       expr->assignment.right = right;
 

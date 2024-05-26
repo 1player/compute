@@ -73,6 +73,7 @@ static void dump(int indent, expr_t *expr) {
 
   case EXPR_ASSIGNMENT:
     emit("Assignment {");
+    ln(indent + 1); emit("definition: %s", expr->assignment.definition ? "true" : "false");
     ln(indent + 1); emit("left: "); dump(indent + 1, expr->assignment.left);
     ln(indent + 1); emit("right: "); dump(indent + 1, expr->assignment.right);
     ln(indent); emit("}");

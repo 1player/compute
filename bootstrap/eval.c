@@ -64,6 +64,30 @@ static Object *eval_identifier(expr_t *expr, Object *scope_) {
   return obj;
 }
 
+static Object *eval_assignment(expr_t *expr, Object *scope_) {
+  Scope *scope = (Scope *)scope_;
+
+  if (expr->assignment.left->type != EXPR_IDENTIFIER) {
+    panic("Expected left-hand side of assignment to be a variable name.");
+  }
+
+  char *var_name = expr->assignment.left->identifier.name;
+  Object *var = symbol_intern(var_name);
+  bool found;
+  scope_lookup(scope, var, &found);
+
+  if (!found && !expr->assignment.definition) {
+    panic("Trying to assign to undefined variable '%s'", var_name);
+  } else if (found && expr->assignment.definition) {
+    panic("Trying to redefine variable '%s'", var_name);
+  }
+
+  Object *obj = eval(expr->assignment.right, scope_);
+  scope_add(scope, var, obj);
+
+  return obj;
+}
+
 static Object *eval_block(expr_t *expr, Object *scope_) {
   Scope *scope = (Scope *)scope_;
   Scope *inner_scope = scope_new(scope);
@@ -94,6 +118,10 @@ Object *eval(expr_t *expr, Object *scope) {
 
   case EXPR_IDENTIFIER:
     result = eval_identifier(expr, scope);
+    break;
+
+  case EXPR_ASSIGNMENT:
+    result = eval_assignment(expr, scope);
     break;
 
   case EXPR_BLOCK:

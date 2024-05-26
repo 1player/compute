@@ -12,6 +12,7 @@ enum token_type {
   TOKEN_ID,
   TOKEN_STRING,
   TOKEN_NUMBER,
+  TOKEN_DEFINE, // :=
   TOKEN_EQUALS, // ==
   TOKEN_IS,     // ===
   TOKEN_IF,     // if
@@ -83,6 +84,7 @@ typedef struct expr_t {
     struct {
       struct expr_t *left;
       struct expr_t *right;
+      bool definition;
     } assignment;
 
     struct {
