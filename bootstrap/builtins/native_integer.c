@@ -24,6 +24,10 @@ Object *native_integer_divide(NativeInteger self, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) / FROM_NATIVE(other));
 }
 
+Object *native_integer_mod(NativeInteger self, NativeInteger other) {
+  return TO_NATIVE(FROM_NATIVE(self) % FROM_NATIVE(other));
+}
+
 Object *native_integer_inspect(NativeInteger self) {
   char *buf;
   asprintf(&buf, "%ld", FROM_NATIVE(self));
@@ -35,6 +39,7 @@ static method_descriptor_t NativeInteger_methods[] = {
   { .name = "-",       .fn = native_integer_minus },
   { .name = "*",       .fn = native_integer_multiply },
   { .name = "/",       .fn = native_integer_divide },
+  { .name = "%",       .fn = native_integer_mod },
   { .name = "inspect", .fn = native_integer_inspect },
   { NULL },
 };

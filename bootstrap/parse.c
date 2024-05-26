@@ -334,6 +334,7 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
     case '-':
     case '*':
     case '/':
+    case '%':
     case TOKEN_EQUALS:
     case TOKEN_IS:
       advance(parser);
