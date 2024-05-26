@@ -13,12 +13,8 @@ Object *string_new(char *buf) {
   return (Object *)str;
 }
 
-bool string_equals(String *self, String *other) {
-  return strequals(self->buf, self->len, other->buf, other->len);
-}
-
-static Object *string_equals_(String *self, String *other) {
-  if (string_equals(self, other)) {
+static Object *string_equals(String *self, String *other) {
+  if (strequals(self->buf, self->len, other->buf, other->len)) {
     return singleton_true;
   }
 
@@ -53,16 +49,16 @@ Object *string_println(String *self) {
 }
 
 method_descriptor_t String_methods[] = {
-  { .name = "==",      .fn = string_equals_ },
+  { .name = "==",      .fn = string_equals },
   { .name = "concat",  .fn = string_concat },
   { .name = "println", .fn = string_println },
   { .name = "inspect", .fn = string_inspect },
   { NULL },
 };
 
-VTable *string_bootstrap() {
+void string_bootstrap(Scope *scope) {
   string_vt = vtable_delegated(object_vt, sizeof(String));
   vtable_add_method_descriptors(string_vt, String_methods);
 
-  return string_vt;
+  scope_add(scope, symbol_intern("String"), (Object *)string_vt);
 }

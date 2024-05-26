@@ -46,9 +46,7 @@ static method_descriptor_t Scope_methods[] = {
   { NULL },
 };
 
-VTable *scope_bootstrap() {
-  scope_vt = vtable_delegated(vtable_vt, sizeof(Scope));
+void scope_bootstrap() {
+  scope_vt = vtable_delegated(object_vt, sizeof(Scope));
   vtable_add_method_descriptors(scope_vt, Scope_methods);
-
-  return scope_vt;
 }

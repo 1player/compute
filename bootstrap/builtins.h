@@ -13,34 +13,33 @@ Object *symbol_intern(char *string);
 
 //
 
-typedef struct String {
-  VTable *_vtable;
-  size_t len;
-  char *buf;
-} String;
-
-VTable *string_bootstrap();
-Object *string_new(char *buf);
-bool string_equals(String *self, String *other);
-
-
-//
-
 typedef struct Scope Scope;
 
-VTable *scope_bootstrap();
+void scope_bootstrap();
 Scope *scope_new();
 Scope *scope_add(Scope *self, Object *name, Object *obj);
 Object *scope_lookup(Scope *self, Object *name, bool *found);
 
 //
 
-Object *native_integer_new(intptr_t number);
-VTable *native_integer_bootstrap();
+typedef struct String {
+  VTable *_vtable;
+  size_t len;
+  char *buf;
+} String;
+
+void string_bootstrap(Scope *scope);
+Object *string_new(char *buf);
 
 //
 
-VTable *boolean_bootstrap();
+void native_integer_bootstrap(Scope *scope);
+Object *native_integer_new(intptr_t number);
+extern VTable *native_integer_vt;
+
+//
+
+void boolean_bootstrap(Scope *scope);
 extern Object *singleton_true;
 extern Object *singleton_false;
 

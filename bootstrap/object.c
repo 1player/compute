@@ -10,7 +10,6 @@
 VTable *vtable_vt;
 VTable *object_vt;
 VTable *nil_vt;
-VTable *native_integer_vt;
 
 //
 
@@ -184,46 +183,34 @@ Object *send_args(Object *receiver, char *selector, array_t *args) {
 //
 
 Object *bootstrap() {
-  // The core objects: VTable, Object and Symbol
+  // The core objects: VTable, Object, nil and Symbol
   vtable_vt = vtable_delegated(NULL, sizeof(VTable));
   vtable_vt->_vtable = vtable_vt;
 
-  VTable *object_vt = vtable_delegated(NULL, sizeof(Object));
+  object_vt = vtable_delegated(NULL, sizeof(Object));
   object_vt->_vtable = vtable_vt;
   vtable_vt->parent = object_vt;
 
   symbol_bootstrap();
 
-  // Core objects: Symbol, String, nil
-  VTable *string_vt = string_bootstrap();
+  nil_vt = vtable_delegated(NULL, 0);
 
   vtable_add_method_descriptors(object_vt, Object_methods);
-
-  nil_vt = vtable_delegated(NULL, 0);
   vtable_add_method_descriptors(nil_vt, Nil_methods);
 
-  // Builtins
-  native_integer_vt = native_integer_bootstrap();
-  VTable *scope_vt = scope_bootstrap();
-  boolean_bootstrap();
-
   // Global scope
+  scope_bootstrap();
+
   Scope *global_scope = scope_new();
+  scope_add(global_scope, symbol_intern("VTable"), (Object *)vtable_vt);
+  scope_add(global_scope, symbol_intern("Object"), (Object *)object_vt);
+  scope_add(global_scope, symbol_intern("scope"), (Object *)global_scope);
+  scope_add(global_scope, symbol_intern("nil"), (Object *)NULL);
 
-#define GLOBAL_SCOPE(name, obj) scope_add(global_scope, symbol_intern(name), (Object *)(obj))
-
-  // Classes
-  GLOBAL_SCOPE("VTable", vtable_vt);
-  GLOBAL_SCOPE("Object", object_vt);
-  GLOBAL_SCOPE("String", string_vt);
-  GLOBAL_SCOPE("NativeInteger", native_integer_vt);
-  GLOBAL_SCOPE("Scope", scope_vt);
-
-  // Singletons
-  GLOBAL_SCOPE("scope", global_scope);
-  GLOBAL_SCOPE("nil", NULL);
-  GLOBAL_SCOPE("true", singleton_true);
-  GLOBAL_SCOPE("false", singleton_false);
+  // Now bootstrap the rest of the builtin objects
+  string_bootstrap(global_scope);
+  native_integer_bootstrap(global_scope);
+  boolean_bootstrap(global_scope);
 
   return (Object *)global_scope;
 }

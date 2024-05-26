@@ -2,7 +2,7 @@
 #include "object.h"
 #include "builtins.h"
 
-static VTable *native_integer_vt;
+VTable *native_integer_vt;
 
 Object *native_integer_new(intptr_t number) {
   return (Object *)TO_NATIVE(number);
@@ -39,9 +39,9 @@ static method_descriptor_t NativeInteger_methods[] = {
   { NULL },
 };
 
-VTable *native_integer_bootstrap() {
+void native_integer_bootstrap(Scope *scope) {
   native_integer_vt = vtable_delegated(object_vt, 0);
   vtable_add_method_descriptors(native_integer_vt, NativeInteger_methods);
 
-  return native_integer_vt;
+  scope_add(scope, symbol_intern("NativeInteger"), (Object *)native_integer_vt);
 }
