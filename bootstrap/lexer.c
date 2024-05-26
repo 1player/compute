@@ -93,7 +93,8 @@ static int lexer_read_number(lexer_t *lexer, int *number) {
   return 0;
 }
 
-char peek(lexer_t *lexer, int ahead) {
+
+char peek_at(lexer_t *lexer, int ahead) {
   char *ptr = lexer->ptr;
   while (ahead-- > 0 && *ptr != '\0') {
     ptr++;
@@ -102,8 +103,27 @@ char peek(lexer_t *lexer, int ahead) {
   return *ptr;
 }
 
+char peek(lexer_t *lexer) {
+  return peek_at(lexer, 0);
+}
+
+void advance(lexer_t *lexer) {
+  if (*lexer->ptr != '\0') {
+    lexer->ptr++;
+  }
+}
+
+void lexer_skip_comment(lexer_t *lexer) {
+  char c;
+  do {
+    c = peek(lexer);
+    advance(lexer);
+  } while(c != '\0' && c != '\n');
+}
+
 
 int lexer_next(lexer_t *lexer, token_t *token) {
+ restart:
   // Skip whitespace
   while (*lexer->ptr == ' ' || *lexer->ptr == '\t') {
     lexer->ptr++;
@@ -129,8 +149,8 @@ int lexer_next(lexer_t *lexer, token_t *token) {
     break;
 
   case '=':
-    if (peek(lexer, 1) == '=') {
-      if (peek(lexer, 2) == '=') {
+    if (peek_at(lexer, 1) == '=') {
+      if (peek_at(lexer, 2) == '=') {
         token->type = TOKEN_IS;
         lexer->ptr += 3;
       } else {
@@ -143,6 +163,14 @@ int lexer_next(lexer_t *lexer, token_t *token) {
     }
     break;
 
+  case '/':
+    if (peek_at(lexer, 1) == '/') {
+      lexer->ptr += 2;
+      lexer_skip_comment(lexer);
+      goto restart;
+    }
+
+    __attribute__ ((fallthrough));
   case '{':
   case '}':
   case ',':
@@ -151,7 +179,6 @@ int lexer_next(lexer_t *lexer, token_t *token) {
   case '+':
   case '-':
   case '*':
-  case '/':
   case '.':
     token->type = c;
     lexer->ptr++;
