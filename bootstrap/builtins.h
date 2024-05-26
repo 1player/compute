@@ -35,17 +35,6 @@ Object *scope_lookup(Scope *self, Object *name, bool *found);
 
 //
 
-typedef struct Tuple {
-  VTable *_vtable;
-  Object *left;
-  Object *right;
-} Tuple;
-
-VTable *tuple_bootstrap();
-Object *tuple_new(Object *left, Object *right);
-
-//
-
 Object *native_integer_new(intptr_t number);
 VTable *native_integer_bootstrap();
 

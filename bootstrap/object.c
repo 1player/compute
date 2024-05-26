@@ -204,7 +204,6 @@ Object *bootstrap() {
 
   // Builtins
   native_integer_vt = native_integer_bootstrap();
-  VTable *tuple_vt = tuple_bootstrap();
   VTable *scope_vt = scope_bootstrap();
   boolean_bootstrap();
 
@@ -218,7 +217,6 @@ Object *bootstrap() {
   GLOBAL_SCOPE("Object", object_vt);
   GLOBAL_SCOPE("String", string_vt);
   GLOBAL_SCOPE("NativeInteger", native_integer_vt);
-  GLOBAL_SCOPE("Tuple", tuple_vt);
   GLOBAL_SCOPE("Scope", scope_vt);
 
   // Singletons
