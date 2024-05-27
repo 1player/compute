@@ -20,14 +20,14 @@ static char *repl_read() {
   return line;
 }
 
-static void repl_parse_eval_and_print(char *input, Object *scope) {
+static void repl_parse_eval_and_print(char *input, object *scope) {
   parser_t parser;
   if (parser_init(&parser, "repl", input) != 0) {
     goto end;
   }
 
   expr_t *expr;
-  Object *obj = NULL;
+  object *obj = NULL;
 
   while ((expr = parser_next(&parser))) {
     if (expr) {
@@ -35,18 +35,18 @@ static void repl_parse_eval_and_print(char *input, Object *scope) {
     }
 
     obj = eval(expr, scope);
-    send(send(obj, "inspect"), "println");
+    send(send(obj, intern("inspect")), intern("println"));
   }
 
  end:
   free(input);
 }
 
-static void repl(Object *scope) {
+static void repl(object *scope) {
   char *input;
 
-  Object *hw = string_new("DAS//compute REPL.\nWrite 'quit' to exit.");
-  send(hw, "println");
+  object *hw = string_new("DAS//compute REPL.\nWrite 'quit' to exit.");
+  send(hw, intern("println"));
 
   while (1) {
     printf("> ");
@@ -74,7 +74,7 @@ static char *read_entire_file(char *file) {
   return body;
 }
 
-static void process_file(char *file, Object *scope) {
+static void process_file(char *file, object *scope) {
   char *body = read_entire_file(file);
   parser_t parser;
   expr_t *expr;
@@ -91,12 +91,12 @@ static void process_file(char *file, Object *scope) {
 }
 
 int main(int argc, char **argv) {
-  Object *global_scope = bootstrap();
+  object *root_scope = root_scope_bootstrap();
 
   if (argc > 1) {
-    process_file(argv[1], global_scope);
+    process_file(argv[1], root_scope);
   } else {
-    repl(global_scope);
+    repl(root_scope);
   }
 
   return 0;

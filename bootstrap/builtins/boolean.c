@@ -1,12 +1,10 @@
 #include "builtins.h"
 #include "lib.h"
 
-Object *singleton_true;
-Object *singleton_false;
+object *singleton_true;
+object *singleton_false;
 
-static VTable *boolean_vt;
-
-Object *boolean_inspect(Object *self) {
+object *boolean_inspect(object *self) {
   if (self == singleton_true) {
     return string_new("true");
   } else if (self == singleton_false) {
@@ -17,18 +15,13 @@ Object *boolean_inspect(Object *self) {
   return NULL;
 }
 
-static method_descriptor_t Boolean_methods[] = {
-  { .name = "inspect", .fn = boolean_inspect },
-  { NULL },
-};
+void boolean_bootstrap(object *scope) {
+  object *the_Boolean = object_derive(the_Object, sizeof(object));
+  singleton_true = object_derive(the_Boolean, sizeof(object));
+  singleton_false = object_derive(the_Boolean, sizeof(object));
 
-void boolean_bootstrap(Scope *scope) {
-  boolean_vt = vtable_delegated(object_vt, 0);
-  vtable_add_method_descriptors(boolean_vt, Boolean_methods);
+  object_set_method(the_Boolean, intern("inspect"), 0, boolean_inspect);
 
-  singleton_true = vtable_allocate(boolean_vt);
-  singleton_false = vtable_allocate(boolean_vt);
-
-  scope_add(scope, symbol_intern("true"), singleton_true);
-  scope_add(scope, symbol_intern("false"), singleton_false);
+  object_set_variable(scope, intern("true"), singleton_true);
+  object_set_variable(scope, intern("false"), singleton_true);
 }

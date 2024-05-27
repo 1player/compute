@@ -1,0 +1,48 @@
+Point := derive {
+  print() => "({},{})".format(self.x, self.y)
+}
+
+CartesianPoint := derive Point {
+  x = 0
+  y = 0
+  new(x, y) => derive self { x = x, y = y }
+  rho() => (self.x * self.x + self.y * self.y).sqrt
+  theta() => (self.y / self.x).arctan
+}
+
+PolarPoint := derive Point {
+  rho = 0
+  theta = 0
+  new(rho, theta) => derive self { x = x, y = y }
+  x() => (self.rho * self.theta).cos
+  y() => (self.rho * self.theta).sin
+}
+
+x := CartesianPoint.new(3, 4)
+x.rho.println
+
+Speaker := derive {
+  play(freq) = {
+    div := 1193180 / freq
+    IO.outb(0x43, 0xb6)
+    IO.outb(0x42, div)
+    IO.outb(0x32, div >> 8)
+
+    tmp := IO.inb(0x61)
+    if tmp != (tmp | 3) => IO.outb(0x61, tmp | 3)
+  }
+
+  silence() = {
+    tmp := IO.inb(0x61) & 0xFC
+    IO.outb(0x61, tmp)
+  }
+
+  beep() = {
+    play(1000)
+    Process.sleep(10)
+    silence()
+  }
+}
+
+Speaker.beep()
+
