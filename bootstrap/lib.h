@@ -3,6 +3,7 @@
 
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define max(a,b)             \
 ({                           \
@@ -59,7 +60,7 @@ typedef size_t location_t;
 string_table_t *string_table_new();
 bool string_table_lookup(string_table_t *t, const char *key, location_t *loc);
 void *string_table_get(string_table_t *t, location_t loc);
-void string_table_set(string_table_t *t, location_t loc, const char *str, void *value);
+char *string_table_set(string_table_t *t, location_t loc, const char *str, void *value);
 
 //
 

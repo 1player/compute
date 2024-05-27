@@ -125,7 +125,7 @@ void *string_table_get(string_table_t *t, location_t loc) {
   return values[loc];
 }
 
-void string_table_set(string_table_t *t, location_t loc, const char *key, void *value) {
+char *string_table_set(string_table_t *t, location_t loc, const char *key, void *value) {
   ssize_t *pointers = (ssize_t *)t->pointers->elements;
   void **values = t->values->elements;
 
@@ -139,4 +139,6 @@ void string_table_set(string_table_t *t, location_t loc, const char *key, void *
   if (t->count > (size * 2) / 3) {
     string_table_expand(t);
   }
+
+  return string_pool_at(&t->pool, pointers[loc]);
 }

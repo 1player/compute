@@ -1,59 +1,60 @@
-#ifndef OBJECT_H
-#define OBJECT_H
+#ifndef UNIVERSE_H
+#define UNIVERSE_H
 
 #include <stdint.h>
 #include "lang.h"
 
-typedef struct VTable VTable;
-typedef struct Object Object;
+#if defined __x86_64__
+#define WORDSIZE 8
+#endif
 
 typedef intptr_t NativeInteger;
+typedef void * WORD;
 
-#define TO_NATIVE(n) ((Object *)((((intptr_t)(n)) << 1) | 1))
+#if WORDSIZE == 8
+typedef int32_t HALFWORD;
+#endif
+
+#define TO_NATIVE(n) ((object *)((((intptr_t)(n)) << 1) | 1))
 #define FROM_NATIVE(n) (((intptr_t)(n)) >> 1)
 #define IS_NATIVE(n) (((intptr_t)(n)) & 1)
 
-#define WORD_SIZE (sizeof(NativeInteger))
+typedef struct object {
+  struct object *parent;
+  HALFWORD flags;
+  HALFWORD capacity;
+  struct object **selectors; // NULL-padded to capacity
+  struct object **slots;     // NULL-padded to capacity
+  char data[];
+} object;
 
 
-typedef struct VTable {
-  VTable *_vtable;
-  VTable *parent;
-  size_t object_size;
+typedef struct Slot {
+  object _o;
+  int arguments;
+  void *data;
+} Slot;
 
-  size_t len;
-  size_t cap;
-  Object **selectors;
-  void **ptrs;
-} VTable;
+extern object *the_Object;
 
-typedef struct Object {
-  VTable *_vtable;
-} Object;
+object *root_scope_bootstrap();
 
-typedef struct {
-  char *name;
-  void *fn;
-} method_descriptor_t;
+object *object_derive(object *self, size_t data_size);
+object *object_set(object *self, object *name, object *slot);
+object *object_lookup(object *self, object *name);
+object *object_set_variable(object *self, object *name, object *value);
+object *object_set_method(object *self, object *name, unsigned int arguments, void *fn);
 
-extern VTable *vtable_vt;
-extern VTable *object_vt;
+bool slot_is_variable(Slot *slot);
+object *slot_for_variable(object *value);
+object *slot_for_method(int arguments, void *fn);
 
-VTable *vtable_delegated(VTable *self, size_t object_size);
-Object *vtable_allocate(VTable *self);
-void vtable_add_method(VTable *self, Object *name, void *ptr);
-void vtable_add_method_descriptors(VTable *self, method_descriptor_t *desc);
-void *vtable_lookup(VTable *self, Object *selector);
+object *intern(char *string);
+object *send(object *receiver, object *selector, int n_args, object **args);
+object *send0(object *receiver, object *selector);
+object *send1(object *receiver, object *selector, object *arg1);
+object *send2(object *receiver, object *selector, object *arg1, object *arg2);
 
-Object *bootstrap();
-
-Object *_send(Object *receiver, char *selector, int n_args, ...);
-Object *send_args(Object *receiver, char *selector, array_t *args);
-
-Object *eval(expr_t *expr, Object *scope);
-
-#define VA_NARGS(...) ((int)(sizeof((Object *[]){ __VA_ARGS__ })/sizeof(Object *)))
-#define send(RCV, SEL, ...) _send((Object *)(RCV), (SEL), VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)
-
+object *eval(expr_t *expr, object *scope);
 
 #endif

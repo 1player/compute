@@ -1,216 +1,172 @@
+#include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 
-#include "lib.h"
 #include "object.h"
 #include "builtins.h"
+#include "lib.h"
 
-VTable *vtable_vt;
-VTable *object_vt;
-VTable *nil_vt;
+object *the_Object;
 
 //
 
-VTable *vtable_delegated(VTable *self, size_t object_size) {
-  VTable *child = (VTable *)malloc(sizeof(VTable));
-  child->_vtable = self ? self->_vtable : NULL;
-  child->parent = self;
-  child->object_size = object_size;
-  child->len = 0;
-  child->cap = 0;
-  child->selectors = NULL;
-  child->ptrs = NULL;
+void *bind(object *receiver, object *name) {
+  Slot *slot = (Slot *)object_lookup(receiver, name);
+  if (!slot) {
+    panic("object %p does not respond to name %p", receiver, name);
+  }
 
+  return slot;
+}
+
+#define PREPARE_SEND(n_args) \
+  Slot *slot = bind(receiver, name); \
+  if (slot_is_variable(slot)) { \
+    return slot->data; \
+  } \
+  if (slot->arguments != 0) { \
+    panic("expected %d arguments, got %d", 0, slot->arguments); \
+  } \
+  void *(*fn)() = slot->data
+
+object *send0(object *receiver, object *name) {
+  PREPARE_SEND(0);
+  return fn(receiver);
+}
+
+object *send1(object *receiver, object *name, object *arg1) {
+  PREPARE_SEND(1);
+  return fn(receiver, arg1);
+}
+
+object *send2(object *receiver, object *name, object *arg1, object *arg2) {
+  PREPARE_SEND(1);
+  return fn(receiver, arg1, arg2);
+}
+
+object *send(object *receiver, object *selector, int n_args, object **args) {
+  panic("Unimplemented");
+  return NULL;
+}
+
+//
+
+object *object_derive(object *self, size_t data_size) {
+  assert(data_size >= sizeof(object));
+
+  object *child = calloc(1, data_size);
+  child->parent = self;
   return child;
 }
 
-Object *vtable_allocate(VTable *self) {
-  Object *obj = calloc(1, self->object_size);
-  obj->_vtable = self;
-  return obj;
+object *object_derive_ni(object *self, object *data_size_ni) {
+  return object_derive(self, FROM_NATIVE(data_size_ni));
 }
 
-void vtable_add_method(VTable *self, Object *selector, void *ptr) {
-  // Replace an existing entry, if any
-  for (size_t i = 0; i < self->len; i++) {
-    if (self->selectors[i] == selector) {
-      self->ptrs[i] = ptr;
-      return;
+static void object_expand_slots(object *self) {
+  HALFWORD cap = self->capacity ? self->capacity * 2 : 4;
+  self->selectors = realloc(self->selectors, sizeof(WORD) * cap);
+  self->slots = realloc(self->slots, sizeof(WORD) * cap);
+  self->capacity = cap;
+}
+
+object *object_set(object *self, object *name, object *slot) {
+  // Find the first available position
+  int pos;
+  for (pos = 0; pos < self->capacity; pos++) {
+    if (!self->selectors[pos]) break;
+  }
+
+  if (pos == self->capacity) {
+    object_expand_slots(self);
+  }
+
+  self->selectors[pos] = name;
+  self->slots[pos] = slot;
+
+  return self;
+}
+
+object *object_lookup(object *self, object *name) {
+  for (HALFWORD pos = 0; pos < self->capacity; pos++) {
+    if (self->selectors[pos] == name) {
+      return self->slots[pos];
     }
   }
 
-  // Resize arrays, if necessary
-  if (self->len == self->cap) {
-    size_t new_cap = max(self->cap * 2, 2u);
-    self->selectors = realloc(self->selectors, new_cap * sizeof(*self->selectors));
-    self->ptrs = realloc(self->ptrs, new_cap * sizeof(*self->ptrs));
-    self->cap = new_cap;
-  }
-
-  self->selectors[self->len] = selector;
-  self->ptrs[self->len] = ptr;
-  self->len++;
-}
-
-void vtable_add_method_descriptors(VTable *self, method_descriptor_t *desc) {
-  while (desc && desc->name) {
-    vtable_add_method(self, (Object *)symbol_intern(desc->name), desc->fn);
-    desc++;
-  }
-}
-
-void *vtable_lookup(VTable *self, Object *selector) {
-  for (size_t i = 0; i < self->len; i++) {
-    if (self->selectors[i] == selector) {
-      return self->ptrs[i];
-    }
-  }
-
-  // If nothing found, check the parent
   if (self->parent) {
-    return vtable_lookup(self->parent, selector);
+    return object_lookup(self->parent, name);
   }
 
   return NULL;
 }
 
-Object *object_inspect(Object *self) {
-  char *buf;
-  asprintf(&buf, "<Object %p>", self);
-  return string_new(buf);
+object *object_set_variable(object *self, object *name, object *value) {
+  return object_set(self, name, slot_for_variable(value));
 }
 
-Object *object_is(Object *self, Object *other) {
-  if (self == other) {
-    return singleton_true;
-  }
-  return singleton_false;
+object *object_set_method(object *self, object *name, unsigned int arguments, void *fn) {
+  return object_set(self, name, slot_for_method(arguments, fn));
 }
-
-method_descriptor_t Object_methods[] = {
-  { .name = "==",      .fn = object_is },
-  { .name = "===",     .fn = object_is },
-  { .name = "inspect", .fn = object_inspect },
-  { NULL },
-};
-
-Object *nil_inspect(Object *self) {
-  (void)self;
-  return string_new("nil");
-}
-
-Object *nil_is(Object *self) {
-  return self == NULL ? singleton_true : singleton_false;
-}
-
-method_descriptor_t Nil_methods[] = {
-  { .name = "===",     .fn = nil_is },
-  { .name = "inspect", .fn = nil_inspect },
-  { NULL },
-};
 
 
 //
 
-static void *bind(Object *receiver, Object *selector) {
-  VTable *vtable;
+typedef struct Symbol {
+  object _o;
+  char *string;
+} Symbol;
 
-  if (receiver == NULL) {
-    vtable = nil_vt;
-  } else if (IS_NATIVE(receiver)) {
-    vtable = native_integer_vt;
+typedef struct SymbolTable {
+  object _o;
+  string_table_t *table;
+} SymbolTable;
+
+SymbolTable *global_symbol_table;
+
+object *intern(char *string) {
+  location_t loc;
+  Symbol *sym;
+
+  if (string_table_lookup(global_symbol_table->table, string, &loc)) {
+    sym = (Symbol *)string_table_get(global_symbol_table->table, loc);
   } else {
-    vtable = receiver->_vtable;
+    sym = (Symbol *)object_derive(the_Object, sizeof(Symbol));
+    sym->string = string_table_set(global_symbol_table->table, loc, string, sym);
   }
 
-  void *ptr = vtable_lookup(vtable, selector);
-  if (!ptr) {
-    Symbol *selector_ = (Symbol *)selector;
-    String *i = (String *)send(receiver, "inspect");
-    fprintf(stderr, "bind: %*s doesn't know how to respond to '%s'\n",
-            (int)i->len, i->buf, selector_->string);
-  }
-
-  return ptr;
+  return (object *)sym;
 }
 
-#define DISPATCH(ret, ptr, n_args, next_arg) do {    \
-    switch ((n_args)) {                      \
-    case 0:                                  \
-      Object *(*fn0)(Object *) = (ptr);      \
-      ret = fn0(receiver);                   \
-      break;                                 \
-    case 1:                                         \
-      Object *(*fn1)(Object *, Object *) = (ptr);   \
-      ret = fn1(receiver, (next_arg));              \
-      break;                                        \
-    default:                                                            \
-      fprintf(stderr, "Sending messages with %d arguments not implemented\n", n_args); \
-    }                                                                   \
-  } while(0)
+object *intern_function(char *name, int args) {
+  if (args < 0) { panic("args < 0"); }
+  char *buf;
 
-Object *_send(Object *receiver, char *selector, int n_args, ...) {
-  void *ptr = bind(receiver, symbol_intern(selector));
-  if (!ptr) {
-    return NULL;
-  }
+  asprintf(&buf, "%s.%d", name, args);
+  object *sym = intern(buf);
+  free(buf);
 
-  va_list args;
-  va_start(args, n_args);
-
-  Object *ret = NULL;
-  DISPATCH(ret, ptr, n_args, va_arg(args, Object *));
-
-  va_end(args);
-  return ret;
-}
-
-Object *send_args(Object *receiver, char *selector, array_t *args) {
-  void *ptr = bind(receiver, symbol_intern(selector));
-  if (!ptr) {
-    return NULL;
-  }
-
-  Object *ret = NULL;
-  int i = 0;
-  DISPATCH(ret, ptr, args->size, args->elements[i++]);
-
-  return ret;
+  return sym;
 }
 
 //
 
-Object *bootstrap() {
-  // The core objects: VTable, Object, nil and Symbol
-  vtable_vt = vtable_delegated(NULL, sizeof(VTable));
-  vtable_vt->_vtable = vtable_vt;
+object *root_scope_bootstrap() {
+  the_Object = object_derive(NULL, sizeof(object));
 
-  object_vt = vtable_delegated(NULL, sizeof(Object));
-  object_vt->_vtable = vtable_vt;
-  vtable_vt->parent = object_vt;
+  global_symbol_table = (SymbolTable *)object_derive(the_Object, sizeof(SymbolTable));
+  global_symbol_table->table = string_table_new();
 
-  symbol_bootstrap();
+  // Set up root scope
+  object *root_scope = object_derive(the_Object, sizeof(object));
+  object_set_variable(root_scope, intern("scope"), root_scope);
 
-  nil_vt = vtable_delegated(NULL, 0);
+  // Set up builtins
+  native_integer_bootstrap(root_scope);
+  string_bootstrap(root_scope);
+  boolean_bootstrap(root_scope);
 
-  vtable_add_method_descriptors(object_vt, Object_methods);
-  vtable_add_method_descriptors(nil_vt, Nil_methods);
-
-  // Global scope
-  scope_bootstrap();
-
-  Scope *global_scope = scope_new(NULL);
-  scope_add(global_scope, symbol_intern("VTable"), (Object *)vtable_vt);
-  scope_add(global_scope, symbol_intern("Object"), (Object *)object_vt);
-  scope_add(global_scope, symbol_intern("scope"), (Object *)global_scope);
-  scope_add(global_scope, symbol_intern("nil"), (Object *)NULL);
-
-  // Now bootstrap the rest of the builtin objects
-  string_bootstrap(global_scope);
-  native_integer_bootstrap(global_scope);
-  boolean_bootstrap(global_scope);
-
-  return (Object *)global_scope;
+  return root_scope;
 }

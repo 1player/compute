@@ -31,3 +31,30 @@ actor Main {
     }
   }
 }
+
+---
+
+Sieve := derive object {
+  prime = 2
+  child = nil
+  
+  public new(n) {
+    n.println
+    derive self { prime = n }
+  }
+  
+  filter(n) {
+    if n % 2 == 0 => return
+
+    if self.child {
+      self.child->filter(n)
+    } else {
+      self.child = spawn self.new(n)
+    }
+  }
+}
+
+root := spawn Sieve.new(2)
+for i in 3..10000 {
+  root->filter(i)
+}

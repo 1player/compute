@@ -2,51 +2,47 @@
 #include "object.h"
 #include "builtins.h"
 
-VTable *native_integer_vt;
+object *the_NativeInteger;
 
-Object *native_integer_new(intptr_t number) {
-  return (Object *)TO_NATIVE(number);
+object *native_integer_new(intptr_t number) {
+  return (object *)TO_NATIVE(number);
 }
 
-Object *native_integer_plus(NativeInteger self, NativeInteger other) {
+object *native_integer_plus(NativeInteger self, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) + FROM_NATIVE(other));
 }
 
-Object *native_integer_minus(NativeInteger self, NativeInteger other) {
+object *native_integer_minus(NativeInteger self, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) - FROM_NATIVE(other));
 }
 
-Object *native_integer_multiply(NativeInteger self, NativeInteger other) {
+object *native_integer_multiply(NativeInteger self, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) * FROM_NATIVE(other));
 }
 
-Object *native_integer_divide(NativeInteger self, NativeInteger other) {
+object *native_integer_divide(NativeInteger self, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) / FROM_NATIVE(other));
 }
 
-Object *native_integer_mod(NativeInteger self, NativeInteger other) {
+object *native_integer_mod(NativeInteger self, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) % FROM_NATIVE(other));
 }
 
-Object *native_integer_inspect(NativeInteger self) {
+object *native_integer_inspect(NativeInteger self) {
   char *buf;
   asprintf(&buf, "%ld", FROM_NATIVE(self));
   return string_new(buf);
 }
 
-static method_descriptor_t NativeInteger_methods[] = {
-  { .name = "+",       .fn = native_integer_plus },
-  { .name = "-",       .fn = native_integer_minus },
-  { .name = "*",       .fn = native_integer_multiply },
-  { .name = "/",       .fn = native_integer_divide },
-  { .name = "%",       .fn = native_integer_mod },
-  { .name = "inspect", .fn = native_integer_inspect },
-  { NULL },
-};
+void native_integer_bootstrap(object *scope) {
+  (void)scope;
 
-void native_integer_bootstrap(Scope *scope) {
-  native_integer_vt = vtable_delegated(object_vt, 0);
-  vtable_add_method_descriptors(native_integer_vt, NativeInteger_methods);
+  the_NativeInteger = object_derive(the_Object, sizeof(object));
 
-  scope_add(scope, symbol_intern("NativeInteger"), (Object *)native_integer_vt);
+  object_set_method(the_NativeInteger, intern("+"), 1, native_integer_plus);
+  object_set_method(the_NativeInteger, intern("-"), 1, native_integer_minus);
+  object_set_method(the_NativeInteger, intern("*"), 1, native_integer_multiply);
+  object_set_method(the_NativeInteger, intern("/"), 1, native_integer_divide);
+  object_set_method(the_NativeInteger, intern("%"), 1, native_integer_mod);
+  object_set_method(the_NativeInteger, intern("inspect"), 0, native_integer_inspect);
 }
