@@ -8,15 +8,34 @@
 #include "builtins.h"
 #include "lib.h"
 
+typedef struct Symbol {
+  object _o;
+  char *string;
+} Symbol;
+
+typedef struct SymbolTable {
+  object _o;
+  string_table_t *table;
+} SymbolTable;
+
 object *the_nil;
 object *the_Object;
+object *the_Symbol;
 
-//
+object *inspect_s;
+
+SymbolTable *global_symbol_table;
+
+
+char *inspect(object *o) {
+  String *s = (String *)send(o, inspect_s);
+  return s->buf;
+}
 
 void *bind(object *receiver, object *name) {
   Slot *slot = (Slot *)object_lookup(receiver, name);
   if (!slot) {
-    panic("object %p does not respond to name %p", receiver, name);
+    panic("%s does not respond to %s", inspect(receiver), inspect(name));
   }
 
   return slot;
@@ -144,19 +163,6 @@ object *object_inspect(object *self) {
 }
 
 
-//
-
-typedef struct Symbol {
-  object _o;
-  char *string;
-} Symbol;
-
-typedef struct SymbolTable {
-  object _o;
-  string_table_t *table;
-} SymbolTable;
-
-SymbolTable *global_symbol_table;
 
 object *intern(char *string) {
   location_t loc;
@@ -165,12 +171,27 @@ object *intern(char *string) {
   if (string_table_lookup(global_symbol_table->table, string, &loc)) {
     sym = (Symbol *)string_table_get(global_symbol_table->table, loc);
   } else {
-    sym = (Symbol *)object_derive(the_Object, sizeof(Symbol));
+    sym = (Symbol *)object_derive(the_Symbol, sizeof(Symbol));
     sym->string = string_table_set(global_symbol_table->table, loc, string, sym);
   }
 
   return (object *)sym;
 }
+
+object *symbol_inspect(Symbol *self) {
+  char *buf;
+  asprintf(&buf, "#%s", self->string);
+  object *s = string_new(buf);
+  free(buf);
+  return s;
+}
+
+object *scope_inspect(object *self) {
+  (void)self;
+
+  return string_new("scope");
+}
+
 
 //
 
@@ -179,17 +200,21 @@ object *root_scope_bootstrap() {
   the_Object = object_derive(NULL, sizeof(object));
   the_nil = object_derive(NULL, sizeof(object));
 
+  the_Symbol = object_derive(the_Object, sizeof(object));
+
   global_symbol_table = (SymbolTable *)object_derive(the_Object, sizeof(SymbolTable));
   global_symbol_table->table = string_table_new();
 
-  object *inspect_s = intern("inspect");
+  inspect_s = intern("inspect");
   object_set_method(the_Object, inspect_s, 0, object_inspect);
   object_set_method(the_nil, inspect_s, 0, object_inspect);
+  object_set_method(the_Symbol, inspect_s, 0, symbol_inspect);
 
   // Set up root scope
   object *root_scope = object_derive(the_Object, sizeof(object));
   object_set_variable(root_scope, intern("scope"), root_scope);
   object_set_variable(root_scope, intern("nil"), NULL);
+  object_set_method(root_scope, inspect_s, 0, scope_inspect);
 
   // Set up builtins
   native_integer_bootstrap(root_scope);

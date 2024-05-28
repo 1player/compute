@@ -3,6 +3,12 @@
 
 #include "object.h"
 
+typedef struct String {
+  object _o;
+  size_t len; // Doesn't include the '\0' at the end
+  char buf[]; // NULL-terminated
+} String;
+
 void string_bootstrap(object *scope);
 void native_integer_bootstrap(object *scope);
 void boolean_bootstrap(object *scope);

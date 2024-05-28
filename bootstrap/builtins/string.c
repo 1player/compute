@@ -4,11 +4,6 @@
 
 #include "builtins.h"
 
-typedef struct String {
-  object _o;
-  size_t len; // Doesn't include the '\0' at the end
-  char buf[];
-} String;
 
 object *the_String;
 
