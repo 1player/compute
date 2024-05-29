@@ -130,8 +130,11 @@ char *string_table_set(string_table_t *t, location_t loc, const char *key, void 
   void **values = t->values->elements;
 
   size_t handle = string_pool_add(&t->pool, key);
+  char *interned_key = string_pool_at(&t->pool, handle);
+
   pointers[loc] = handle;
   values[loc] = value;
+
   t->count++;
 
   // Adjust at 66% occupation
@@ -140,5 +143,5 @@ char *string_table_set(string_table_t *t, location_t loc, const char *key, void 
     string_table_expand(t);
   }
 
-  return string_pool_at(&t->pool, pointers[loc]);
+  return interned_key;
 }
