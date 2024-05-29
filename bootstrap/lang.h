@@ -17,6 +17,7 @@ enum token_type {
   TOKEN_IS,     // ===
   TOKEN_IF,     // if
   TOKEN_ELSE,   // else
+  TOKEN_FUNC,   // func
 };
 
 typedef struct token {
@@ -55,6 +56,7 @@ enum expr_type {
   EXPR_ASSIGNMENT,
   EXPR_BLOCK,
   EXPR_CONDITIONAL,
+  EXPR_CLOSURE,
 };
 
 typedef struct expr_t {
@@ -98,6 +100,11 @@ typedef struct expr_t {
       struct expr_t *if_block;
       struct expr_t *else_expr;
     } conditional;
+
+    struct {
+      array_t *args;
+      struct expr_t *block;
+    } closure;
   };
 } expr_t;
 

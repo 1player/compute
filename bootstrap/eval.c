@@ -104,6 +104,36 @@ static object *eval_conditional(expr_t *expr, object *scope_) {
   return NULL;
 }
 
+static object *eval_closure(expr_t *expr, object *scope) {
+  // Intern the arguments
+  array_t *arg_names = array_new_with_capacity(expr->closure.args->size);
+
+  for (int i = 0; i < expr->closure.args->size; i++) {
+    expr_t *arg_expr = expr->closure.args->elements[i];
+
+    if (arg_expr->type != EXPR_IDENTIFIER) {
+      panic("Expected only identifiers in closure argument list");
+    }
+
+    object *name = intern(arg_expr->identifier.name);
+    array_append(arg_names, name);
+  }
+
+  return closure_new(arg_names, expr->closure.block, scope);
+}
+
+object *eval_closure_call(expr_t *body, object *scope, array_t *arg_names, va_list arg_values) {
+  // Create a new child scope and set all the names of arguments to the passed values
+  object *inner_scope = object_derive(scope, sizeof(object));
+
+  array_foreach(arg_names, object *, arg_name) {
+    object *arg_value = va_arg(arg_values, object *);
+    object_set_variable(inner_scope, arg_name, arg_value);
+  }
+
+  return eval_block(body, inner_scope);
+}
+
 object *eval(expr_t *expr, object *scope) {
   object *result = NULL;
 
@@ -134,6 +164,10 @@ object *eval(expr_t *expr, object *scope) {
 
   case EXPR_CONDITIONAL:
     result = eval_conditional(expr, scope);
+    break;
+
+  case EXPR_CLOSURE:
+    result = eval_closure(expr, scope);
     break;
 
   default:

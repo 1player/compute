@@ -247,6 +247,7 @@ object *root_scope_bootstrap() {
 
   // Set up builtins
   native_integer_bootstrap(root_scope);
+  closure_bootstrap(root_scope);
   string_bootstrap(root_scope);
   boolean_bootstrap(root_scope);
   runtime_bootstrap(root_scope);

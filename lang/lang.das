@@ -22,4 +22,10 @@ Runtime.assert("foo".concat("bar"), "foobar")
 Runtime.assert("foo".concat("bar") === "foobar", false)
 
 
+// Closures (WIP)
+add1 := func(n) { n + 1 }
+Runtime.assert(add1.call(5), 6)
+
+
+
 "Self-test passed.".println()

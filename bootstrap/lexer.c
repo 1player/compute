@@ -11,6 +11,7 @@ static struct {
 } keyword_table[] = {
   { "if",   TOKEN_IF },
   { "else", TOKEN_ELSE },
+  { "func", TOKEN_FUNC },
 };
 
 static const int n_keywords = sizeof(keyword_table) / sizeof(keyword_table[0]);
@@ -168,6 +169,10 @@ char *lexer_explain(token_t *tok) {
 
   case TOKEN_ELSE:
     asprintf(&e, "else");
+    break;
+
+  case TOKEN_FUNC:
+    asprintf(&e, "func");
     break;
   }
 

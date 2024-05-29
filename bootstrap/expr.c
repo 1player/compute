@@ -98,6 +98,13 @@ static void dump(int indent, expr_t *expr) {
     ln(indent); emit("}");
     break;
 
+  case EXPR_CLOSURE:
+    emit("Closure {");
+    ln(indent + 1); emit("args: "); dump_array(indent + 1, expr->closure.args);
+    ln(indent + 1); emit("block: "); dump(indent + 1, expr->closure.block);
+    ln(indent); emit("}");
+    break;
+
   default:
     panic("Not implemented dump of expr->type %d", expr->type);
   }

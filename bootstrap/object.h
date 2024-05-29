@@ -55,6 +55,7 @@ object *send_args(object *receiver, object *selector, int n_args, object **args)
 object *send_(object *receiver, object *selector, int n_args, ...);
 
 object *eval(expr_t *expr, object *scope);
+object *eval_closure_call(expr_t *body, object *scope, array_t *arg_names, va_list arg_values);
 
 #define VA_NARGS(...) ((int)(sizeof((object *[]){ __VA_ARGS__ })/sizeof(object *)))
 #define send(RCV, SEL, ...) send_((RCV), (SEL), VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)

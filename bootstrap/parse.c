@@ -97,7 +97,7 @@ expr_t *subexpression(parser_t *parser) {
   return expr;
 }
 
-static array_t *send_args(parser_t *parser) {
+static array_t *arg_list(parser_t *parser) {
   if (expect_and_advance(parser, '(')) {
     return NULL;
   }
@@ -211,6 +211,18 @@ expr_t *conditional(parser_t *parser) {
   return expr;
 }
 
+expr_t *closure(parser_t *parser) {
+  if (expect_and_advance(parser, TOKEN_FUNC)) {
+    return NULL;
+  }
+
+  expr_t *expr = new_expr(EXPR_CLOSURE);
+  TRY(expr->closure.args = arg_list(parser));
+  TRY(expr->closure.block = block(parser));
+
+  return expr;
+}
+
 expr_t *atom(parser_t *parser) {
   expr_t *expr = NULL;
 
@@ -249,6 +261,10 @@ expr_t *atom(parser_t *parser) {
     expr->identifier.name = parser->cur_token.value_id;
 
     advance(parser);
+    break;
+
+  case TOKEN_FUNC:
+    expr = closure(parser);
     break;
 
   default:
@@ -337,7 +353,7 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
       expr = new_expr(EXPR_SEND);
       expr->send.receiver = new_expr(EXPR_SELF);
       expr->send.selector = result;
-      if (!(expr->send.args = send_args(parser))) {
+      if (!(expr->send.args = arg_list(parser))) {
         return NULL;
       }
       result = expr;
@@ -358,7 +374,7 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
       expr->send.selector->identifier.name = parser->cur_token.value_id;
 
       advance(parser);
-      if (!(expr->send.args = send_args(parser))) {
+      if (!(expr->send.args = arg_list(parser))) {
         return NULL;
       }
 
