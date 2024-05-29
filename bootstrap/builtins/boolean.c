@@ -23,5 +23,5 @@ void boolean_bootstrap(object *scope) {
   object_set_method(the_Boolean, intern("inspect"), 0, boolean_inspect);
 
   object_set_variable(scope, intern("true"), singleton_true);
-  object_set_variable(scope, intern("false"), singleton_true);
+  object_set_variable(scope, intern("false"), singleton_false);
 }
