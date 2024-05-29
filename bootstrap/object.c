@@ -99,10 +99,17 @@ object *object_derive_ni(object *self, object *data_size_ni) {
 }
 
 static void object_expand_slots(object *self) {
-  HALFWORD cap = self->capacity ? self->capacity * 2 : 4;
-  self->selectors = realloc(self->selectors, sizeof(WORD) * cap);
-  self->slots = realloc(self->slots, sizeof(WORD) * cap);
-  self->capacity = cap;
+  HALFWORD cap = self->capacity;
+  HALFWORD new_cap = cap ? cap * 2 : 4;
+
+  self->selectors = realloc(self->selectors, sizeof(WORD) * new_cap);
+  self->slots = realloc(self->slots, sizeof(WORD) * new_cap);
+
+  // Clear new capacity to NULL
+  memset(&self->selectors[cap], 0, (new_cap - cap) * sizeof(WORD));
+  memset(&self->slots[cap], 0,     (new_cap - cap) * sizeof(WORD));
+
+  self->capacity = new_cap;
 }
 
 object *object_set(object *self, object *name, object *slot) {
