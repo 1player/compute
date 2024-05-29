@@ -18,3 +18,7 @@ It is based upon three main concepts:
 ### Other ideas
 
 * Not everything has to be defined from "within" the language. For example, take Smalltalk's implementation of control flow with the ifTrue:ifFalse: message. In DAS//, some concepts are allowed to be part of the "meta environment" to allow for more advanced optimizations. For example, Booleans and control structures map natively to how CPUs work, so if we don't try to pigeonhole these into messages, it is much easier to optimize them out into native CPU instructions (`test`, `jnz`, etc.)
+
+## Gotchas
+
+* There is no memory management at all, just yet. Things are allocated and never freed.
