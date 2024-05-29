@@ -47,19 +47,33 @@ void *bind(object *receiver, object *name) {
         return slot->data;                                              \
       }                                                                 \
       if (slot->arguments != (n_args)) {                                \
-        panic("expected %d arguments, got %d", (n_args), slot->arguments); \
+        panic("%s slot on %s expects %d arguments, got %d",             \
+            inspect(selector), inspect(receiver),                       \
+            (n_args), slot->arguments);                                 \
       }                                                                 \
       slot->data;                                                       \
     })
 
 #define DISPATCH(fn, n_args, next_arg) ({                               \
       object *ret;                                                      \
+      object *arg1, *arg2, *arg3;                                       \
       switch ((n_args)) {                                               \
       case 0:                                                           \
         ret = fn(receiver);                                             \
         break;                                                          \
       case 1:                                                           \
         ret = fn(receiver, (next_arg));                                 \
+        break;                                                          \
+      case 2:                                                           \
+        arg1 = (next_arg);                                              \
+        arg2 = (next_arg);                                              \
+        ret = fn(receiver, arg1, arg2);                                 \
+        break;                                                          \
+      case 3:                                                           \
+        arg1 = (next_arg);                                              \
+        arg2 = (next_arg);                                              \
+        arg3 = (next_arg);                                              \
+        ret = fn(receiver, arg1, arg2, arg3);                           \
         break;                                                          \
       default:                                                          \
         panic("Sending messages with %d arguments not implemented\n", n_args); \
@@ -169,7 +183,12 @@ object *object_inspect(object *self) {
   return s;
 }
 
-
+object *object_is(object *self, object *other) {
+  if (self == other) {
+    return singleton_true;
+  }
+  return singleton_false;
+}
 
 object *intern(char *string) {
   location_t loc;
@@ -214,6 +233,9 @@ object *root_scope_bootstrap() {
 
   inspect_s = intern("inspect");
   object_set_method(the_Object, inspect_s, 0, object_inspect);
+  object_set_method(the_Object, intern("=="), 1, object_is);
+  object_set_method(the_Object, intern("==="), 1, object_is);
+
   object_set_method(the_nil, inspect_s, 0, object_inspect);
   object_set_method(the_Symbol, inspect_s, 0, symbol_inspect);
 
@@ -227,6 +249,7 @@ object *root_scope_bootstrap() {
   native_integer_bootstrap(root_scope);
   string_bootstrap(root_scope);
   boolean_bootstrap(root_scope);
+  runtime_bootstrap(root_scope);
 
   return root_scope;
 }

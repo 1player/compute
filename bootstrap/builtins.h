@@ -12,6 +12,7 @@ typedef struct String {
 void string_bootstrap(object *scope);
 void native_integer_bootstrap(object *scope);
 void boolean_bootstrap(object *scope);
+void runtime_bootstrap(object *scope);
 
 object *string_new(char *buf);
 object *native_integer_new(intptr_t number);

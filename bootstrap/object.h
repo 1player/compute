@@ -49,6 +49,7 @@ bool slot_is_variable(Slot *slot);
 object *slot_for_variable(object *value);
 object *slot_for_method(int arguments, void *fn);
 
+char *inspect(object *o);
 object *intern(char *string);
 object *send_args(object *receiver, object *selector, int n_args, object **args);
 object *send_(object *receiver, object *selector, int n_args, ...);
