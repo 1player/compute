@@ -37,6 +37,7 @@ typedef struct lexer {
 
 int lexer_create(lexer_t *lexer, char *file, char *input);
 int lexer_next(lexer_t *lexer, token_t *token);
+char *lexer_explain(token_t *tok);
 
 //
 

@@ -121,6 +121,58 @@ void lexer_skip_comment(lexer_t *lexer) {
   } while(c != '\0' && c != '\n');
 }
 
+char *lexer_explain(token_t *tok) {
+  char *e = NULL;
+
+  if ((int)tok->type > 0 && (int)tok->type < 256) {
+    asprintf(&e, "character '%c'", (unsigned char)tok->type);
+    return e;
+  }
+
+  switch (tok->type) {
+  case TOKEN_EOF:
+    asprintf(&e, "EOF");
+    break;
+
+  case TOKEN_NEWLINE:
+    asprintf(&e, "newline");
+    break;
+
+  case TOKEN_ID:
+    asprintf(&e, "identifier '%s'", tok->value_id);
+    break;
+
+  case TOKEN_STRING:
+    asprintf(&e, "string '%s'", tok->value_string);
+    break;
+
+  case TOKEN_NUMBER:
+    asprintf(&e, "number '%d'", tok->value_number);
+    break;
+
+  case TOKEN_DEFINE:
+    asprintf(&e, ":=");
+    break;
+
+  case TOKEN_EQUALS:
+    asprintf(&e, "==");
+    break;
+
+  case TOKEN_IS:
+    asprintf(&e, "===");
+    break;
+
+  case TOKEN_IF:
+    asprintf(&e, "if");
+    break;
+
+  case TOKEN_ELSE:
+    asprintf(&e, "else");
+    break;
+  }
+
+  return e;
+}
 
 int lexer_next(lexer_t *lexer, token_t *token) {
  restart:

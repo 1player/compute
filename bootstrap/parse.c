@@ -14,7 +14,6 @@
 expr_t *expression(parser_t *parser);
 static expr_t *expression_(parser_t *parser, int min_precedence);
 
-
 // Return precedence when left-associative, -precedence otherwise
 static int operator_precedence(enum token_type tok) {
   switch ((int)tok) {
@@ -41,58 +40,19 @@ static int operator_precedence(enum token_type tok) {
   return 0;
 }
 
+static enum token_type peek(parser_t *parser) {
+  return parser->cur_token.type;
+}
 
-static char *token_explain(token_t *tok) {
-  char *e = NULL;
+static void advance(parser_t *parser) {
+  parser->prev_token = parser->cur_token;
+  lexer_next(&parser->lexer, &parser->cur_token);
+}
 
-  if ((int)tok->type > 0 && (int)tok->type < 256) {
-    asprintf(&e, "character '%c'", (unsigned char)tok->type);
-    return e;
+void skip_empty(parser_t *parser) {
+  while (peek(parser) == TOKEN_NEWLINE || peek(parser) == ';') {
+    advance(parser);
   }
-
-  switch (tok->type) {
-  case TOKEN_EOF:
-    asprintf(&e, "EOF");
-    break;
-
-  case TOKEN_NEWLINE:
-    asprintf(&e, "newline");
-    break;
-
-  case TOKEN_ID:
-    asprintf(&e, "identifier '%s'", tok->value_id);
-    break;
-
-  case TOKEN_STRING:
-    asprintf(&e, "string '%s'", tok->value_string);
-    break;
-
-  case TOKEN_NUMBER:
-    asprintf(&e, "number '%d'", tok->value_number);
-    break;
-
-  case TOKEN_DEFINE:
-    asprintf(&e, ":=");
-    break;
-
-  case TOKEN_EQUALS:
-    asprintf(&e, "==");
-    break;
-
-  case TOKEN_IS:
-    asprintf(&e, "===");
-    break;
-
-  case TOKEN_IF:
-    asprintf(&e, "if");
-    break;
-
-  case TOKEN_ELSE:
-    asprintf(&e, "else");
-    break;
-  }
-
-  return e;
 }
 
 static void parser_error(parser_t *parser, char *msg, ...) {
@@ -104,14 +64,6 @@ static void parser_error(parser_t *parser, char *msg, ...) {
   parser->had_errors = true;
 }
 
-static enum token_type peek(parser_t *parser) {
-  return parser->cur_token.type;
-}
-
-static void advance(parser_t *parser) {
-  parser->prev_token = parser->cur_token;
-  lexer_next(&parser->lexer, &parser->cur_token);
-}
 
 static int expect_and_advance(parser_t *parser, enum token_type expected) {
   if (peek(parser) == expected) {
@@ -119,7 +71,7 @@ static int expect_and_advance(parser_t *parser, enum token_type expected) {
     return 0;
   }
 
-  parser_error(parser, "Unexpected token %s", token_explain(&parser->cur_token));
+  parser_error(parser, "Unexpected token %s", lexer_explain(&parser->cur_token));
   return 1;
 }
 
@@ -202,7 +154,7 @@ void end_of_expression(parser_t *parser, bool in_block) {
     break;
   }
 
-  parser_error(parser, "Expected end of expression, instead got %s", token_explain(&parser->cur_token));
+  parser_error(parser, "Expected end of expression, instead got %s", lexer_explain(&parser->cur_token));
   synchronize(parser);
 }
 
@@ -210,6 +162,8 @@ expr_t *block(parser_t *parser) {
   if (expect_and_advance(parser, '{')) {
     return NULL;
   }
+
+  skip_empty(parser);
 
   expr_t *block_expr = new_expr(EXPR_BLOCK);
   block_expr->block.exprs = array_new();
@@ -298,7 +252,7 @@ expr_t *atom(parser_t *parser) {
     break;
 
   default:
-    char *e = token_explain(&parser->cur_token);
+    char *e = lexer_explain(&parser->cur_token);
     parser_error(parser, "Unexpected %s while parsing expression", e);
     free(e);
 
@@ -394,7 +348,7 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
 
       tok = peek(parser);
       if (tok != TOKEN_ID) {
-        parser_error(parser, "Expected identifier, got %s", token_explain(&parser->cur_token));
+        parser_error(parser, "Expected identifier, got %s", lexer_explain(&parser->cur_token));
         return NULL;
       }
 
@@ -438,11 +392,6 @@ int parser_init(parser_t *parser, char *file, char *input) {
   return 0;
 }
 
-void skip_empty(parser_t *parser) {
-  while (peek(parser) == TOKEN_NEWLINE || peek(parser) == ';') {
-    advance(parser);
-  }
-}
 
 expr_t *parser_next(parser_t *parser) {
   skip_empty(parser);
