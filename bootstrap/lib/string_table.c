@@ -90,7 +90,7 @@ static void string_table_expand(string_table_t *t) {
     char *key = string_pool_at(&t->pool, pointers[i]);
     size_t index = hash(key) % new_size;
     while (new_pointers[index] != -1) {
-      index = (index + 1) % size;
+      index = (index + 1) % new_size;
     }
     new_pointers[index] = pointers[i];
     new_values[index] = values[i];
