@@ -10,7 +10,7 @@
 
 typedef struct Symbol {
   object _o;
-  char *string;
+  size_t handle;
 } Symbol;
 
 typedef struct SymbolTable {
@@ -179,7 +179,7 @@ object *intern(char *string) {
     sym = (Symbol *)string_table_get(global_symbol_table->table, loc);
   } else {
     sym = (Symbol *)object_derive(the_Symbol, sizeof(Symbol));
-    sym->string = string_table_set(global_symbol_table->table, loc, string, sym);
+    sym->handle = string_table_set(global_symbol_table->table, loc, string, sym);
   }
 
   return (object *)sym;
@@ -187,7 +187,7 @@ object *intern(char *string) {
 
 object *symbol_inspect(Symbol *self) {
   char *buf;
-  asprintf(&buf, "#%s", self->string);
+  asprintf(&buf, "#%s", string_table_get_key(global_symbol_table->table, self->handle));
   object *s = string_new(buf);
   free(buf);
   return s;

@@ -126,13 +126,15 @@ void *string_table_get(string_table_t *t, location_t loc) {
   return values[loc];
 }
 
-char *string_table_set(string_table_t *t, location_t loc, const char *key, void *value) {
+char *string_table_get_key(string_table_t *t, size_t handle) {
+  return string_pool_at(&t->pool, handle);
+}
+
+size_t string_table_set(string_table_t *t, location_t loc, const char *key, void *value) {
   ssize_t *pointers = (ssize_t *)t->pointers->elements;
   void **values = t->values->elements;
 
   size_t handle = string_pool_add(&t->pool, key);
-  char *interned_key = string_pool_at(&t->pool, handle);
-
   pointers[loc] = handle;
   values[loc] = value;
 
@@ -144,5 +146,5 @@ char *string_table_set(string_table_t *t, location_t loc, const char *key, void 
     string_table_expand(t);
   }
 
-  return interned_key;
+  return handle;
 }
