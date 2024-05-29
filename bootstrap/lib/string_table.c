@@ -21,6 +21,7 @@ static size_t string_pool_add(string_pool_t *sp, const char *str) {
   if (new_size > sp->cap) {
     size_t new_cap = next_power_of_2(new_size);
     sp->buf = realloc(sp->buf, new_cap);
+    memset(&sp->buf[sp->cap], 0, new_cap - sp->cap);
     sp->cap = new_cap;
   }
 
