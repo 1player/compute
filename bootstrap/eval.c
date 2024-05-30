@@ -54,7 +54,14 @@ static object *eval_binary_send(expr_t *expr, object *scope_) {
 
 static object *eval_identifier(expr_t *expr, object *scope) {
   object *name = intern(expr->identifier.name);
-  return send(scope, name);
+  bool found;
+  object *value = scope_lookup(scope, name, &found);
+
+  if (!found) {
+    panic("%s not found in current scope", expr->identifier.name);
+  }
+
+  return value;
 }
 
 static object *eval_assignment(expr_t *expr, object *scope) {
@@ -64,7 +71,9 @@ static object *eval_assignment(expr_t *expr, object *scope) {
 
   char *var_name = expr->assignment.left->identifier.name;
   object *var = intern(var_name);
-  bool found = object_lookup(scope, var) != NULL;
+
+  bool found;
+  scope_lookup(scope, var, &found);
 
   if (!found && !expr->assignment.definition) {
     panic("Trying to assign to undefined variable '%s'", var_name);
@@ -73,13 +82,13 @@ static object *eval_assignment(expr_t *expr, object *scope) {
   }
 
   object *obj = eval(expr->assignment.right, scope);
-  object_set_variable(scope, var, obj);
+  scope_set(scope, var, obj);
 
   return obj;
 }
 
 static object *eval_block(expr_t *expr, object *scope) {
-  object *inner_scope = object_derive(scope, sizeof(object));
+  object *inner_scope = scope_derive(scope);
 
   object *obj = NULL;
   array_foreach(expr->block.exprs, expr_t *, inner_expr) {
@@ -124,11 +133,11 @@ static object *eval_closure(expr_t *expr, object *scope) {
 
 object *eval_closure_call(expr_t *body, object *scope, array_t *arg_names, va_list arg_values) {
   // Create a new child scope and set all the names of arguments to the passed values
-  object *inner_scope = object_derive(scope, sizeof(object));
+  object *inner_scope = scope_derive(scope);
 
   array_foreach(arg_names, object *, arg_name) {
     object *arg_value = va_arg(arg_values, object *);
-    object_set_variable(inner_scope, arg_name, arg_value);
+    scope_set(inner_scope, arg_name, arg_value);
   }
 
   return eval_block(body, inner_scope);

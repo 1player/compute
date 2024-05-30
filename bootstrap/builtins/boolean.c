@@ -15,13 +15,18 @@ object *boolean_inspect(object *self) {
   return NULL;
 }
 
+static slot_definition Boolean_slots[] = {
+  { .type = METHOD_SLOT, .selector = "inspect", .value = boolean_inspect },
+  { 0 },
+};
+
+
 void boolean_bootstrap(object *scope) {
-  object *the_Boolean = object_derive(the_Object, sizeof(object));
-  singleton_true = object_derive(the_Boolean, sizeof(object));
-  singleton_false = object_derive(the_Boolean, sizeof(object));
+  trait *Boolean_trait = trait_derive(Object_trait, 0, Boolean_slots);
 
-  object_set_method(the_Boolean, intern("inspect"), 0, boolean_inspect);
+  singleton_true = object_new(Boolean_trait);
+  singleton_false = object_new(Boolean_trait);
 
-  object_set_variable(scope, intern("true"), singleton_true);
-  object_set_variable(scope, intern("false"), singleton_false);
+  scope_set(scope, intern("true"), singleton_true);
+  scope_set(scope, intern("false"), singleton_false);
 }

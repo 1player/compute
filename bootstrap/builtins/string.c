@@ -4,19 +4,19 @@
 
 #include "builtins.h"
 
-
-object *the_String;
+trait *String_trait;
 
 static String *string_new_with_size(size_t len) {
-  String *str = (String *)object_derive(the_String, sizeof(String) + len + 1);
+  String *str = (String *)object_new(String_trait);
   str->len = len;
+  str->buf = calloc(1, len + 1);
   return str;
 }
 
 object *string_new(char *buf) {
   size_t len = strlen(buf);
   String *str = string_new_with_size(len);
-  memmove(&str->buf, buf, len);
+  memmove(str->buf, buf, len);
   str->buf[len] = 0;
 
   return (object *)str;
@@ -55,13 +55,16 @@ object *string_println(String *self) {
   return NULL;
 }
 
+static slot_definition String_slots[] = {
+  { .type = METHOD_SLOT, .selector = "==",      .value = string_equals },
+  { .type = METHOD_SLOT, .selector = "concat",  .value = string_concat },
+  { .type = METHOD_SLOT, .selector = "println", .value = string_println },
+  { .type = METHOD_SLOT, .selector = "inspect", .value = string_inspect },
+  { 0 },
+};
+
 void string_bootstrap(object *scope) {
-  the_String = object_derive(the_Object, sizeof(String));
+  String_trait = trait_derive(Object_trait, sizeof(String), String_slots);
 
-  object_set_method(the_String, intern("=="), 1, string_equals);
-  object_set_method(the_String, intern("concat"), 1, string_concat);
-  object_set_method(the_String, intern("println"), 0, string_println);
-  object_set_method(the_String, intern("inspect"), 0, string_inspect);
-
-  object_set_variable(scope, intern("String"), the_String);
+  scope_set(scope, intern("String"), (object *)String_trait);
 }

@@ -10,9 +10,14 @@ object *runtime_assert(object *self, object *left, object *right) {
   return NULL;
 }
 
-void runtime_bootstrap(object *scope) {
-  object *the_Runtime = object_derive(the_Object, sizeof(object));
-  object_set_method(the_Runtime, intern("assert"), 2, runtime_assert);
+static slot_definition Runtime_slots[] = {
+  { .type = METHOD_SLOT, .selector = "assert", .value = runtime_assert },
+  { 0 },
+};
 
-  object_set_variable(scope, intern("Runtime"), the_Runtime);
+void runtime_bootstrap(object *scope) {
+  trait *Runtime_trait = trait_derive(Object_trait, 0, Runtime_slots);
+  object *the_Runtime = object_new(Runtime_trait);
+
+  scope_set(scope, intern("Runtime"), the_Runtime);
 }

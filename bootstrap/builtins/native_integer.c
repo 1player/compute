@@ -2,7 +2,7 @@
 #include "object.h"
 #include "builtins.h"
 
-object *the_NativeInteger;
+trait *NativeInteger_trait;
 
 object *native_integer_new(intptr_t number) {
   return (object *)TO_NATIVE(number);
@@ -34,15 +34,19 @@ object *native_integer_inspect(NativeInteger self) {
   return string_new(buf);
 }
 
+static slot_definition NativeInteger_slots[] = {
+  { .type = METHOD_SLOT, .selector = "+", .value = native_integer_plus },
+  { .type = METHOD_SLOT, .selector = "-", .value = native_integer_minus },
+  { .type = METHOD_SLOT, .selector = "*", .value = native_integer_multiply },
+  { .type = METHOD_SLOT, .selector = "/", .value = native_integer_divide },
+  { .type = METHOD_SLOT, .selector = "%", .value = native_integer_mod },
+  { .type = METHOD_SLOT, .selector = "inspect", .value = native_integer_inspect },
+  { 0 },
+};
+
+
 void native_integer_bootstrap(object *scope) {
   (void)scope;
 
-  the_NativeInteger = object_derive(the_Object, sizeof(object));
-
-  object_set_method(the_NativeInteger, intern("+"), 1, native_integer_plus);
-  object_set_method(the_NativeInteger, intern("-"), 1, native_integer_minus);
-  object_set_method(the_NativeInteger, intern("*"), 1, native_integer_multiply);
-  object_set_method(the_NativeInteger, intern("/"), 1, native_integer_divide);
-  object_set_method(the_NativeInteger, intern("%"), 1, native_integer_mod);
-  object_set_method(the_NativeInteger, intern("inspect"), 0, native_integer_inspect);
+  NativeInteger_trait = trait_derive(Object_trait, 0, NativeInteger_slots);
 }

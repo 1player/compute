@@ -1,15 +1,16 @@
-# DAS//compute
+# das://compute
 
-This repository is the forge vat into which *DAS//compute*, a second-generation computing system, is being grown.
+This repository is the forge vat into which *das://compute*, a second-generation computing system, is being grown.
 
 It is based upon three main concepts:
-- An architecture-independent prototype-based language into which most of the system is written in.
+- An architecture-independent trait-oriented language into which most of the system is written in.
 - A message-passing, typed object model to represent the semantics of the system.
 - An actor-based kernel running hosted on bare metal, or on top of an existing operating system, to run and exchange messages between actors.
 
 ## Language design brainstorming
 
-* Inspired by [Ian Piumarta's "Open, extensible object models"](https://www.piumarta.com/software/id-objmodel/objmodel2.pdf) but with a focus on prototypes.
+* Inspired by [Ian Piumarta's "Open, extensible object models"](https://www.piumarta.com/software/id-objmodel/objmodel2.pdf).
+* The object model is based off stateful traits, that can be composed together until they construct a "complete" trait (with no holes) that can instantiate an object. There are no classes, nor inheritance.
 
 ### Memory model
 

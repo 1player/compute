@@ -9,7 +9,8 @@
 #endif
 
 typedef intptr_t NativeInteger;
-typedef void * WORD;
+typedef intptr_t WORD;
+typedef uintptr_t UWORD;
 
 #if WORDSIZE == 8
 typedef int32_t HALFWORD;
@@ -19,35 +20,39 @@ typedef int32_t HALFWORD;
 #define FROM_NATIVE(n) (((intptr_t)(n)) >> 1)
 #define IS_NATIVE(n) (((intptr_t)(n)) & 1)
 
+typedef struct trait trait;
+
 typedef struct object {
-  struct object *parent;
-  HALFWORD flags;
-  HALFWORD capacity;
-  struct object **selectors; // NULL-padded to capacity
-  struct object **slots;     // NULL-padded to capacity
-  char data[];
+  trait *_trait[0];
+  WORD _data[];
 } object;
 
+#define TRAIT(o)      (((object *)(o))->_trait[-1])
 
-typedef struct Slot {
-  object _o;
-  int arguments;
-  void *data;
-} Slot;
+typedef struct trait {
+  trait *parent;
+  UWORD n_slots;
+  UWORD data_size;
+  object **selectors;
+  object **slots;
+} trait;
 
-extern object *the_Object;
+enum slot_type {
+  UNSET_SLOT = 0,
+  METHOD_SLOT,
+  DATA_SLOT,
+};
 
-object *root_scope_bootstrap();
+typedef struct slot_definition {
+  enum slot_type type;
+  char *selector;
+  void *value;
+} slot_definition;
 
-object *object_derive(object *self, size_t data_size);
-object *object_set(object *self, object *name, object *slot);
-object *object_lookup(object *self, object *name);
-object *object_set_variable(object *self, object *name, object *value);
-object *object_set_method(object *self, object *name, unsigned int arguments, void *fn);
+trait *trait_derive(trait *parent, size_t trait_size, slot_definition *defs);
+object *object_new(trait *_trait);
 
-bool slot_is_variable(Slot *slot);
-object *slot_for_variable(object *value);
-object *slot_for_method(int arguments, void *fn);
+object *object_lookup(object *self, object *name, bool *found);
 
 char *inspect(object *o);
 object *intern(char *string);
@@ -59,5 +64,9 @@ object *eval_closure_call(expr_t *body, object *scope, array_t *arg_names, va_li
 
 #define VA_NARGS(...) ((int)(sizeof((object *[]){ __VA_ARGS__ })/sizeof(object *)))
 #define send(RCV, SEL, ...) send_((RCV), (SEL), VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)
+
+object *root_scope_bootstrap();
+
+extern trait *Object_trait;
 
 #endif

@@ -5,13 +5,12 @@
 #include "lang.h"
 
 typedef struct Closure {
-  object _o;
   expr_t *body;
   object *scope;
   array_t *arg_names; // An array of Symbols
 } Closure;
 
-object *the_Closure;
+trait *Closure_trait;
 
 object *closure_inspect(Closure *self) {
   char *buf;
@@ -33,19 +32,23 @@ object *closure_call(Closure *self, ...) {
 }
 
 object *closure_new(array_t *arg_names, expr_t *body, object *scope) {
-  Closure *self = (Closure *)object_derive(the_Closure, sizeof(Closure));
+  Closure *self = (Closure *)object_new(Closure_trait);
   self->arg_names = arg_names;
   self->body = body;
   self->scope = scope;
 
-  object_set_method((object *)self, intern("call"), arg_names->size, closure_call);
-
   return (object *)self;
 }
 
-void closure_bootstrap(object *scope) {
-  the_Closure = object_derive(the_Object, sizeof(Closure));
-  object_set_method(the_Closure, intern("inspect"), 0, closure_inspect);
+static slot_definition Closure_slots[] = {
+  { .type = METHOD_SLOT, .selector = "call", .value = closure_call },
+  { .type = METHOD_SLOT, .selector = "inspect", .value = closure_inspect },
+  { 0 },
+};
 
-  object_set_variable(scope, intern("Closure"), the_Closure);
+
+void closure_bootstrap(object *scope) {
+  (void)scope;
+
+  Closure_trait = trait_derive(Object_trait, sizeof(Closure), Closure_slots);
 }
