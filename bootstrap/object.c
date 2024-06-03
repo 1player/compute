@@ -17,7 +17,8 @@ trait *Object_trait;
 trait *Symbol_trait;
 trait *nil_trait;
 
-object *inspect_s;
+object *inspect_s; // the symbol "inspect"
+object *lookup_s;  // the symbol "lookup"
 
 string_table_t *global_symbol_table;
 
@@ -162,13 +163,14 @@ object *trait_lookup(trait *self, object *name) {
       }
     }
 
-    t = self->parent;
+    t = t->parent;
   }
 
 
   return NULL;
 }
 
+object *send_(object *receiver, object *selector, int n_args, ...);
 
 void *bind(object *receiver, object *name) {
   trait *_trait;
@@ -181,9 +183,16 @@ void *bind(object *receiver, object *name) {
     _trait = TRAIT(receiver);
   }
 
-  // TODO: we should delegate this operation by sending a `lookup` message
-  // as suggested by Piumarta
-  object *value = trait_lookup(_trait, name);
+  object *value;
+
+  if (_trait == Trait_trait) {
+    value = trait_lookup(_trait, name);
+  } else {
+    value = send_((object *)_trait, lookup_s, 1, name);
+  }
+
+  // TODO: this has no business doing here. Should be moved after we
+  // implement our equivalent of `doesNotUnderstand`
   if (!value) {
     panic("%s does not respond to %s", inspect(receiver), inspect(name));
   }
@@ -244,6 +253,11 @@ object *send_args(object *receiver, object *selector, int n_args, object **args)
 }
 
 
+static slot_definition Trait_slots[] = {
+  { .type = METHOD_SLOT, .selector = "lookup",  .value = trait_lookup },
+  { 0 },
+};
+
 static slot_definition Object_slots[] = {
   { .type = METHOD_SLOT, .selector = "inspect", .value = object_inspect },
   { .type = METHOD_SLOT, .selector = "==",      .value = object_is },
@@ -263,7 +277,7 @@ static slot_definition nil_slots[] = {
 
 object *root_scope_bootstrap() {
   // The Piumarta loop
-  Trait_trait = trait_alloc(NULL, sizeof(trait), 0);
+  Trait_trait = trait_alloc(NULL, sizeof(trait), count_slots(Trait_slots));
   TRAIT(Trait_trait) = Trait_trait;
 
   Object_trait = trait_alloc(NULL, sizeof(object), count_slots(Object_slots));
@@ -279,6 +293,9 @@ object *root_scope_bootstrap() {
 
   // Now intern should work, so fill in the slots of Trait, Object, and Symbol
   inspect_s = intern("inspect");
+  lookup_s = intern("lookup");
+
+  trait_set_slots(Trait_trait, count_slots(Trait_slots), Trait_slots);
   trait_set_slots(Object_trait, count_slots(Object_slots), Object_slots);
   trait_set_slots(Symbol_trait, count_slots(Symbol_slots), Symbol_slots);
   trait_set_slots(nil_trait, count_slots(nil_slots), nil_slots);
