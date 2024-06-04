@@ -42,6 +42,7 @@ enum slot_type {
   UNSET_SLOT = 0,
   METHOD_SLOT,
   DATA_SLOT,
+  DISPATCH_SLOT, // the slot of the __dispatch__ method
 };
 
 typedef struct slot_definition {
@@ -60,12 +61,9 @@ typedef struct Symbol {
   size_t handle;
 } Symbol;
 
-typedef struct __lookup __lookup;
-
 #define HANDLER(name, ...)                                              \
   object *name(void *closure_data, void *self, object *receiver, ##__VA_ARGS__)
 
-__lookup *trait_lookup(trait *self, object *name);
 trait *trait_derive(trait *parent, size_t trait_size, slot_definition *defs);
 
 object *object_new(trait *_trait);

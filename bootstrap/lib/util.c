@@ -5,6 +5,7 @@
 
 #include "lang.h"
 
+__attribute__((noreturn))
 void panic(const char *msg, ...) {
   va_list args;
 

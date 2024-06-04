@@ -5,12 +5,7 @@
 
 // Trait
 
-HANDLER(Trait__lookup, object *name) {
-  return (object *)trait_lookup((trait *)self, name);
-}
-
 slot_definition Trait_slots[] = {
-  { .type = METHOD_SLOT, .selector = "lookup",  .value = Trait__lookup },
   { 0 },
 };
 

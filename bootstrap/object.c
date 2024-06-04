@@ -16,8 +16,11 @@ typedef struct Closure {
 
 typedef struct __lookup {
   enum slot_type type;
-  Closure *closure;
-  size_t offset; // Offset of this trait's data in the object's body
+  union {
+    Closure *closure;  // The closure if it's a METHOD slot
+    size_t offset;     // The offset of the data field if it's a DATA slot
+  };
+  size_t trait_offset; // Offset of this trait's data in the object's body
 } __lookup;
 
 trait *Trait_trait;
@@ -26,8 +29,8 @@ trait *Symbol_trait;
 trait *Closure_trait;
 trait *nil_trait;
 
-object *inspect_s; // the symbol "inspect"
-object *lookup_s;  // the symbol "lookup"
+object *inspect_s;  // the symbol "inspect"
+object *dispatch_s; // the symbol "__dispatch__"
 
 string_table_t *global_symbol_table;
 
@@ -153,39 +156,62 @@ object *closure_new_interpreted(array_t *arg_names, expr_t *body, object *scope)
   return closure_new(eval_interpreted_closure, i);
 }
 
-__lookup *trait_lookup(trait *self, object *name) {
-  trait *t = self;
-  __lookup *result = malloc(sizeof(__lookup));
+static bool lookup_selector_in_trait(trait *t, object *name, __lookup *result) {
+  object *slot = NULL;
+  object *dispatch_slot = NULL;
 
-  while (t) {
-    for (size_t pos = 0; pos < t->n_slots; pos++) {
-      if (t->selectors[pos] != name) {
-        continue;
-      }
-
-      if (IS_NATIVE(t->slots[pos])) {
-        result->type = DATA_SLOT;
-      } else {
-        result->type = METHOD_SLOT;
-        result->closure = (Closure *)t->slots[pos];
-      }
-
-      goto end;
+  for (size_t pos = 0; pos < t->n_slots; pos++) {
+    if (t->selectors[pos] == name) {
+      slot = t->slots[pos];
+      break;
     }
 
-    result->offset += t->data_size;
+    if (t->selectors[pos] == dispatch_s) {
+      assert(!IS_NATIVE(t->slots[pos]));
+      dispatch_slot = t->slots[pos];
+    }
+  }
+
+  if (!slot) {
+    if (dispatch_slot) {
+      result->type = DISPATCH_SLOT;
+      result->closure = (Closure *)dispatch_slot;
+      return true;
+    }
+    return false;
+  }
+
+  if (IS_NATIVE(slot)) {
+    result->type = DATA_SLOT;
+    result->offset = FROM_NATIVE(slot);
+  } else {
+    result->type = METHOD_SLOT;
+    result->closure = (Closure *)slot;
+  }
+
+  return true;
+}
+
+
+static __lookup trait_lookup(trait *self, object *name) {
+  __lookup result = { .type = UNSET_SLOT };
+
+  trait *t = self;
+  while (t) {
+    if (lookup_selector_in_trait(t, name, &result)) {
+      return result;
+    }
+
+    result.trait_offset += t->data_size;
     t = t->parent;
   }
 
-  result->type = UNSET_SLOT;
-
- end:
   return result;
 }
 
 object *send_(object *receiver, object *selector, int n_args, ...);
 
-__lookup *bind(object *receiver, object *name) {
+__lookup bind(object *receiver, object *name) {
   trait *_trait;
 
   if (receiver == NULL) {
@@ -196,11 +222,7 @@ __lookup *bind(object *receiver, object *name) {
     _trait = TRAIT(receiver);
   }
 
-  if (_trait == Trait_trait) {
-    return trait_lookup(_trait, name);
-  }
-
-  return (__lookup *)send_((object *)_trait, lookup_s, 1, name);
+  return trait_lookup(_trait, name);
 }
 
 object *send_(object *receiver, object *selector, int n_args, ...) {
@@ -218,33 +240,34 @@ object *send_(object *receiver, object *selector, int n_args, ...) {
 }
 
 object *send_args(object *rcv, object *sel, int n_args, object **args) {
-  __lookup *l = bind(rcv, sel);
-  if (l->type == UNSET_SLOT) {
+  __lookup l = bind(rcv, sel);
+  if (l.type == UNSET_SLOT) {
     panic("%s does not respond to %s", inspect(rcv), inspect(sel));
-  } else if (l->type == DATA_SLOT) {
+  } else if (l.type == DATA_SLOT) {
     panic("Unimplemented fetching data slot.");
+  } else if (l.type == DISPATCH_SLOT) {
+    n_args += 1;
   }
 
-  Closure *closure = l->closure;
-  void *trait_data = (char *)&rcv[l->offset];
+  Closure *closure = l.closure;
+  void *trait_data = (char *)&rcv[l.trait_offset];
 
-  free(l);
-
-  // Can we make this better, please?
-  object *arg1, *arg2, *arg3;
-  switch ((n_args)) {
-  case 0:
+  if (n_args == 0) {
     return closure->entrypoint(closure->data, trait_data, rcv);
+  }
+
+  object *arg1 = l.type == DISPATCH_SLOT ? sel : *args;
+  object *arg2, *arg3;
+
+  switch (n_args) {
   case 1:
-    return closure->entrypoint(closure->data, trait_data, rcv, *args++);
+    return closure->entrypoint(closure->data, trait_data, rcv, arg1);
   case 2:
-    arg1 = *args++;
-    arg2 = *args++;
+    arg2 = *++args;
     return closure->entrypoint(closure->data, trait_data, rcv, arg1, arg2);
   case 3:
-    arg1 = *args++;
-    arg2 = *args++;
-    arg3 = *args++;
+    arg2 = *++args;
+    arg3 = *++args;
     return closure->entrypoint(closure->data, trait_data, rcv, arg1, arg2, arg3);
   }
 
@@ -273,7 +296,7 @@ object *root_scope_bootstrap() {
 
   // Now intern and closures should work, so fill in the slots of Trait, Object, and Symbol
   inspect_s = intern("inspect");
-  lookup_s = intern("lookup");
+  dispatch_s = intern("__dispatch__");
 
   trait_set_slots(Trait_trait, count_slots(Trait_slots), Trait_slots);
   trait_set_slots(Object_trait, count_slots(Object_slots), Object_slots);
