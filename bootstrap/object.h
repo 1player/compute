@@ -61,6 +61,11 @@ typedef struct Symbol {
   size_t handle;
 } Symbol;
 
+typedef struct Closure {
+  object *(*entrypoint)();
+  void *data;
+} Closure;
+
 #define HANDLER(name, ...)                                              \
   object *name(void *closure_data, void *self, object *receiver, ##__VA_ARGS__)
 
@@ -76,8 +81,10 @@ object *send_(object *receiver, object *selector, int n_args, ...);
 object *eval(expr_t *expr, object *scope);
 object *eval_interpreted_closure(interpreted_closure_t *cdata, void *tdata, object *r, ...);
 
+bool is_closure(object *o);
 object *closure_new(void *entrypoint, void *data);
 object *closure_new_interpreted(array_t *arg_names, expr_t *body, object *scope);
+object *closure_call(Closure *closure, void *trait_data, object *receiver, int n_args, object **args);
 
 #define VA_NARGS(...) ((int)(sizeof((object *[]){ __VA_ARGS__ })/sizeof(object *)))
 #define send(RCV, SEL, ...) send_((RCV), (SEL), VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)

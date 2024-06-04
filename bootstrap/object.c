@@ -8,12 +8,6 @@
 #include "builtins.h"
 #include "lib.h"
 
-
-typedef struct Closure {
-  object *(*entrypoint)();
-  void *data;
-} Closure;
-
 typedef struct __lookup {
   enum slot_type type;
   union {
@@ -138,6 +132,32 @@ object *object_new(trait *_trait) {
   return o;
 }
 
+bool is_closure(object *o) {
+  return !IS_NATIVE(o) && o && TRAIT(o) == Closure_trait;
+}
+
+object *closure_call(Closure *closure, void *trait_data, object *rcv, int n_args, object **args) {
+  object *arg1, *arg2, *arg3;
+  switch (n_args) {
+  case 0:
+    return closure->entrypoint(closure->data, trait_data, rcv);
+  case 1:
+    arg1 = *args++;
+    return closure->entrypoint(closure->data, trait_data, rcv, arg1);
+  case 2:
+    arg1 = *args++;
+    arg2 = *args++;
+    return closure->entrypoint(closure->data, trait_data, rcv, arg1, arg2);
+  case 3:
+    arg1 = *args++;
+    arg2 = *args++;
+    arg3 = *args++;
+    return closure->entrypoint(closure->data, trait_data, rcv, arg1, arg2, arg3);
+  }
+
+  panic("Sending messages with %d arguments not implemented\n", n_args);
+  return NULL;
+}
 
 object *closure_new(void *entrypoint, void *data) {
   Closure *self = (Closure *)object_new(Closure_trait);
@@ -191,8 +211,10 @@ static __lookup trait_lookup(trait *self, object *name) {
       goto end;
     }
 
-    result.trait_offset += t->data_size;
     t = t->parent;
+    if (t) {
+      result.trait_offset += t->data_size;
+    }
   }
 
   // Nothing found.
@@ -233,7 +255,6 @@ object *send_(object *receiver, object *selector, int n_args, ...) {
   }
 
   va_end(va);
-
   return send_args(receiver, selector, n_args, args);
 }
 
@@ -244,33 +265,19 @@ object *send_args(object *rcv, object *sel, int n_args, object **args) {
   } else if (l.type == DATA_SLOT) {
     panic("Unimplemented fetching data slot.");
   } else if (l.type == DISPATCH_SLOT) {
-    n_args += 1;
+    // __dispatch__ takes three arguments: selector, n_args and args
+    object **new_args = (object **)alloca(3 * sizeof(object *));
+    new_args[0] = sel;
+    new_args[1] = TO_NATIVE(n_args);
+    new_args[2] = (object *)args;
+
+    n_args = 3;
+    args = new_args;
   }
 
   Closure *closure = l.closure;
   void *trait_data = (char *)&rcv[l.trait_offset];
-
-  if (n_args == 0) {
-    return closure->entrypoint(closure->data, trait_data, rcv);
-  }
-
-  object *arg1 = l.type == DISPATCH_SLOT ? sel : *args;
-  object *arg2, *arg3;
-
-  switch (n_args) {
-  case 1:
-    return closure->entrypoint(closure->data, trait_data, rcv, arg1);
-  case 2:
-    arg2 = *++args;
-    return closure->entrypoint(closure->data, trait_data, rcv, arg1, arg2);
-  case 3:
-    arg2 = *++args;
-    arg3 = *++args;
-    return closure->entrypoint(closure->data, trait_data, rcv, arg1, arg2, arg3);
-  }
-
-  panic("Sending messages with %d arguments not implemented\n", n_args);
-  return NULL;
+  return closure_call(closure, trait_data, rcv, n_args, args);
 }
 
 object *root_scope_bootstrap() {

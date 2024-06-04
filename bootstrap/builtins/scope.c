@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 
 #include "builtins.h"
@@ -55,7 +56,6 @@ object *scope_lookup(object *self_, object *name_s, bool *found) {
   return NULL;
 }
 
-
 object *scope_derive(object *parent_) {
   Scope *parent = (Scope *)parent_;
 
@@ -66,9 +66,30 @@ object *scope_derive(object *parent_) {
   return (object *)child;
 }
 
+HANDLER(Scope__dispatch, object *selector, NativeInteger n_args, object **args) {
+  bool found;
+  object *o = scope_lookup(self, selector, &found);
+  if (!found) {
+    panic("%s not found in current scope", inspect(selector));
+  }
+
+  if (is_closure(o)) {
+    return closure_call((Closure *)o, NULL, NULL, n_args, args);
+  }
+
+  return o;
+}
+
+slot_definition Scope_slots[] = {
+  { .type = METHOD_SLOT, .selector = "__dispatch__", .value = Scope__dispatch, },
+  { 0 },
+};
+
 object *scope_bootstrap() {
-  Scope_trait = trait_derive(Object_trait, sizeof(Scope), NULL);
+  Scope_trait = trait_derive(Object_trait, sizeof(Scope), Scope_slots);
+
   object *the_RootScope = scope_derive(NULL);
+  scope_set(the_RootScope, intern("scope"), the_RootScope);
 
   return the_RootScope;
 }

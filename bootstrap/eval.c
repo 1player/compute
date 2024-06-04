@@ -53,15 +53,7 @@ static object *eval_binary_send(expr_t *expr, object *scope_) {
 }
 
 static object *eval_identifier(expr_t *expr, object *scope) {
-  object *name = intern(expr->identifier.name);
-  bool found;
-  object *value = scope_lookup(scope, name, &found);
-
-  if (!found) {
-    panic("%s not found in current scope", expr->identifier.name);
-  }
-
-  return value;
+  return send(scope, intern(expr->identifier.name));
 }
 
 static object *eval_assignment(expr_t *expr, object *scope) {
