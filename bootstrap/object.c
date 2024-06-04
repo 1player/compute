@@ -156,56 +156,54 @@ object *closure_new_interpreted(array_t *arg_names, expr_t *body, object *scope)
   return closure_new(eval_interpreted_closure, i);
 }
 
-static bool lookup_selector_in_trait(trait *t, object *name, __lookup *result) {
-  object *slot = NULL;
-  object *dispatch_slot = NULL;
-
+static object *lookup_selector_in_trait(trait *t, object *name, object **dispatch_slot) {
   for (size_t pos = 0; pos < t->n_slots; pos++) {
     if (t->selectors[pos] == name) {
-      slot = t->slots[pos];
-      break;
+      return t->slots[pos];
     }
 
-    if (t->selectors[pos] == dispatch_s) {
+    if (t->selectors[pos] == dispatch_s && !*dispatch_slot) {
       assert(!IS_NATIVE(t->slots[pos]));
-      dispatch_slot = t->slots[pos];
+      *dispatch_slot = t->slots[pos];
     }
   }
 
-  if (!slot) {
-    if (dispatch_slot) {
-      result->type = DISPATCH_SLOT;
-      result->closure = (Closure *)dispatch_slot;
-      return true;
-    }
-    return false;
-  }
-
-  if (IS_NATIVE(slot)) {
-    result->type = DATA_SLOT;
-    result->offset = FROM_NATIVE(slot);
-  } else {
-    result->type = METHOD_SLOT;
-    result->closure = (Closure *)slot;
-  }
-
-  return true;
+  return NULL;
 }
 
-
 static __lookup trait_lookup(trait *self, object *name) {
+  object *slot;
   __lookup result = { .type = UNSET_SLOT };
+  // The first __dispatch__ slot we have found traversing the trait tree
+  // BUG: we do not calculate the correct trait offset for the dispatch slot
+  object *dispatch_slot = NULL;
 
   trait *t = self;
   while (t) {
-    if (lookup_selector_in_trait(t, name, &result)) {
-      return result;
+    if ((slot = lookup_selector_in_trait(t, name, &dispatch_slot))) {
+      if (IS_NATIVE(slot)) {
+        result.type = DATA_SLOT;
+        result.offset = FROM_NATIVE(slot);
+      } else {
+        result.type = METHOD_SLOT;
+        result.closure = (Closure *)slot;
+      }
+      goto end;
     }
 
     result.trait_offset += t->data_size;
     t = t->parent;
   }
 
+  // Nothing found.
+  if (dispatch_slot) {
+    result.type = DISPATCH_SLOT;
+    result.closure = (Closure *)dispatch_slot;
+  } else {
+    result.type = UNSET_SLOT;
+  }
+
+end:
   return result;
 }
 
