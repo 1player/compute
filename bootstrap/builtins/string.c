@@ -73,5 +73,5 @@ static slot_definition String_slots[] = {
 void string_bootstrap(object *scope) {
   String_trait = trait_derive(Object_trait, sizeof(String), String_slots);
 
-  scope_set(scope, intern("String"), (object *)String_trait);
+  scope_assign(scope, intern("String"), (object *)String_trait, true);
 }

@@ -27,6 +27,6 @@ void boolean_bootstrap(object *scope) {
   singleton_true = object_new(Boolean_trait);
   singleton_false = object_new(Boolean_trait);
 
-  scope_set(scope, intern("true"), singleton_true);
-  scope_set(scope, intern("false"), singleton_false);
+  scope_assign(scope, intern("true"), singleton_true, true);
+  scope_assign(scope, intern("false"), singleton_false, true);
 }

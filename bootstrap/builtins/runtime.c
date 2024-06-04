@@ -19,5 +19,5 @@ void runtime_bootstrap(object *scope) {
   trait *Runtime_trait = trait_derive(Object_trait, 0, Runtime_slots);
   object *the_Runtime = object_new(Runtime_trait);
 
-  scope_set(scope, intern("Runtime"), the_Runtime);
+  scope_assign(scope, intern("Runtime"), the_Runtime, true);
 }

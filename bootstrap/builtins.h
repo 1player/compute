@@ -21,7 +21,7 @@ object *native_integer_new(intptr_t number);
 typedef struct Scope Scope;
 
 object *scope_derive(object *self);
-void scope_set(object *self, object *key, object *value);
+bool scope_assign(object *self, object *key, object *value, bool is_definition);
 object *scope_lookup(object *self, object *key, bool *found);
 
 extern slot_definition Trait_slots[];

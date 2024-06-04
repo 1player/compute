@@ -64,17 +64,13 @@ static object *eval_assignment(expr_t *expr, object *scope) {
   char *var_name = expr->assignment.left->identifier.name;
   object *var = intern(var_name);
 
-  bool found;
-  scope_lookup(scope, var, &found);
-
-  if (!found && !expr->assignment.definition) {
-    panic("Trying to assign to undefined variable '%s'", var_name);
-  } else if (found && expr->assignment.definition) {
-    panic("Trying to redefine variable '%s'", var_name);
-  }
-
+  bool is_definition = expr->assignment.definition;
   object *obj = eval(expr->assignment.right, scope);
-  scope_set(scope, var, obj);
+
+  bool success = scope_assign(scope, var, obj, is_definition);
+  if (!success) {
+    panic("Trying to assign to undefined variable '%s'", var_name);
+  }
 
   return obj;
 }
@@ -132,7 +128,7 @@ object *eval_interpreted_closure(interpreted_closure_t *c, void *tdata, object *
 
   array_foreach(c->arg_names, object *, arg_name) {
     object *arg_value = va_arg(va, object *);
-    scope_set(inner_scope, arg_name, arg_value);
+    scope_assign(inner_scope, arg_name, arg_value, true);
   }
 
   va_end(va);

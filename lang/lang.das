@@ -17,6 +17,16 @@ selfTest__x := 137
     Runtime.assert(selfTest__x + selfTest__y, 137 + 82)
 }
 
+x := 10
+y := 20
+{
+  x = x + 1
+  y := y + 1
+  Runtime.assert(x, 11)
+  Runtime.assert(y, 21)
+}
+Runtime.assert(x, 11)
+Runtime.assert(y, 20)
 
 // Strings
 Runtime.assert("foo".concat("bar"), "foobar")

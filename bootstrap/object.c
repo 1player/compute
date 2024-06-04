@@ -311,7 +311,7 @@ object *root_scope_bootstrap() {
 
   // Create the root scope
   object *root_scope = scope_bootstrap();
-  scope_set(root_scope, intern("nil"), (object *)NULL);
+  scope_assign(root_scope, intern("nil"), (object *)NULL, true);
 
   // Now bootstrap all the builtin objects
   native_integer_bootstrap(root_scope);

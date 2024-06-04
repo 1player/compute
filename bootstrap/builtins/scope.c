@@ -5,7 +5,6 @@
 
 typedef struct Scope {
   Scope *parent;
-  size_t height; // 0 indicates the root scope
   size_t len;
   size_t cap;
   object **names;
@@ -14,46 +13,81 @@ typedef struct Scope {
 
 trait *Scope_trait;
 
-void scope_set(object *self_, object *name_s, object *value) {
-  Scope *self = (Scope *)self_;
+// Traverse the list of scopes to find the slot that contains a particular name
+// Returns whether the name was found
+static bool lookup_name(Scope *scope, object *name, size_t *pos, Scope **owner) {
+  Scope *s = scope;
 
-  // Replace an existing entry, if any
-  for (size_t i = 0; i < self->len; i++) {
-    if (self->names[i] == name_s) {
-      self->values[i] = value;
-      return;
+  while (s) {
+    for (size_t i = 0; i < s->len; i++) {
+      if (s->names[i] != name) {
+        continue;
+      }
+
+      *pos = i;
+      *owner = s;
+      return true;
     }
+    s = s->parent;
   }
 
-  // Resize arrays, if necessary
+  return false;
+}
+
+static void maybe_resize(Scope *self) {
   if (self->len == self->cap) {
     size_t new_cap = max(self->cap * 2, 2u);
     self->names = realloc(self->names, new_cap * sizeof(*self->names));
     self->values = realloc(self->values, new_cap * sizeof(*self->values));
     self->cap = new_cap;
   }
-
-  self->names[self->len] = name_s;
-  self->values[self->len] = value;
-  self->len++;
 }
 
-object *scope_lookup(object *self_, object *name_s, bool *found) {
+// Assigns a value to a variable name.
+bool scope_assign(object *self_, object *name_s, object *value, bool is_definition) {
   Scope *self = (Scope *)self_;
+  Scope *owner;
+  size_t pos;
 
-  for (size_t i = 0; i < self->len; i++) {
-    if (self->names[i] == name_s) {
-      *found = true;
-      return self->values[i];
+  if (lookup_name(self, name_s, &pos, &owner)) {
+    if (is_definition && owner != self) {
+      // We are redefining a variable contained in an outer scope.
+      // Redefine it in this scope.
+      owner = self;
+      pos = self->len;
+    } else {
+      owner->values[pos] = value;
+      return true;
     }
+  } else if (!is_definition) {
+    // This name does not exist and we're not defining it. Fail.
+    return false;
+  } else {
+    // This name does not exist, add it to ourselves
+    owner = self;
+    pos = self->len;
   }
 
-  if (self->height > 0) {
-    return scope_lookup((object *)self->parent, name_s, found);
+  maybe_resize(owner);
+
+  owner->names[owner->len] = name_s;
+  owner->values[owner->len] = value;
+  owner->len++;
+
+  return true;
+}
+
+object *scope_lookup(object *self, object *name_s, bool *found) {
+  Scope *owner;
+  size_t pos;
+
+  if (!lookup_name((Scope *)self, name_s, &pos, &owner)) {
+    *found = false;
+    return NULL;
   }
 
-  *found = false;
-  return NULL;
+  *found = true;
+  return owner->values[pos];
 }
 
 object *scope_derive(object *parent_) {
@@ -61,7 +95,6 @@ object *scope_derive(object *parent_) {
 
   Scope *child = (Scope *)object_new(Scope_trait);
   child->parent = parent;
-  child->height = parent ? parent->height + 1 : 0;
 
   return (object *)child;
 }
@@ -89,7 +122,7 @@ object *scope_bootstrap() {
   Scope_trait = trait_derive(Object_trait, sizeof(Scope), Scope_slots);
 
   object *the_RootScope = scope_derive(NULL);
-  scope_set(the_RootScope, intern("scope"), the_RootScope);
+  scope_assign(the_RootScope, intern("scope"), the_RootScope, true);
 
   return the_RootScope;
 }
