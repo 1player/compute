@@ -109,9 +109,14 @@ char peek(lexer_t *lexer) {
 }
 
 void advance(lexer_t *lexer) {
-  if (*lexer->ptr != '\0') {
-    lexer->ptr++;
+  if (*lexer->ptr == '\0') {
+    return;
   }
+
+  if (*lexer->ptr == '\n') {
+    lexer->line++;
+  }
+  lexer->ptr++;
 }
 
 void lexer_skip_comment(lexer_t *lexer) {
@@ -229,7 +234,6 @@ int lexer_next(lexer_t *lexer, token_t *token) {
 
     __attribute__ ((fallthrough));
 
-
   case ';':
   case '{':
   case '}':
@@ -242,13 +246,12 @@ int lexer_next(lexer_t *lexer, token_t *token) {
   case '.':
   case '%':
     token->type = c;
-    lexer->ptr++;
+    advance(lexer);
     break;
 
   case '\n':
     token->type = TOKEN_NEWLINE;
-    lexer->ptr++;
-    lexer->line++;
+    advance(lexer);
     break;
 
   case '"':
