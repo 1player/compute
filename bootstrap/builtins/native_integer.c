@@ -8,39 +8,39 @@ object *native_integer_new(intptr_t number) {
   return (object *)TO_NATIVE(number);
 }
 
-object *native_integer_plus(NativeInteger self, NativeInteger other) {
+HANDLER(NativeInteger__plus, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) + FROM_NATIVE(other));
 }
 
-object *native_integer_minus(NativeInteger self, NativeInteger other) {
+HANDLER(NativeInteger__minus, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) - FROM_NATIVE(other));
 }
 
-object *native_integer_multiply(NativeInteger self, NativeInteger other) {
+HANDLER(NativeInteger__multiply, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) * FROM_NATIVE(other));
 }
 
-object *native_integer_divide(NativeInteger self, NativeInteger other) {
+HANDLER(NativeInteger__divide, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) / FROM_NATIVE(other));
 }
 
-object *native_integer_mod(NativeInteger self, NativeInteger other) {
+HANDLER(NativeInteger__mod, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) % FROM_NATIVE(other));
 }
 
-object *native_integer_inspect(NativeInteger self) {
+HANDLER(NativeInteger__inspect) {
   char *buf;
   asprintf(&buf, "%ld", FROM_NATIVE(self));
   return string_new(buf);
 }
 
 static slot_definition NativeInteger_slots[] = {
-  { .type = METHOD_SLOT, .selector = "+", .value = native_integer_plus },
-  { .type = METHOD_SLOT, .selector = "-", .value = native_integer_minus },
-  { .type = METHOD_SLOT, .selector = "*", .value = native_integer_multiply },
-  { .type = METHOD_SLOT, .selector = "/", .value = native_integer_divide },
-  { .type = METHOD_SLOT, .selector = "%", .value = native_integer_mod },
-  { .type = METHOD_SLOT, .selector = "inspect", .value = native_integer_inspect },
+  { .type = METHOD_SLOT, .selector = "+", .value = NativeInteger__plus },
+  { .type = METHOD_SLOT, .selector = "-", .value = NativeInteger__minus },
+  { .type = METHOD_SLOT, .selector = "*", .value = NativeInteger__multiply },
+  { .type = METHOD_SLOT, .selector = "/", .value = NativeInteger__divide },
+  { .type = METHOD_SLOT, .selector = "%", .value = NativeInteger__mod },
+  { .type = METHOD_SLOT, .selector = "inspect", .value = NativeInteger__inspect },
   { 0 },
 };
 

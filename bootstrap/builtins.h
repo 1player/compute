@@ -14,17 +14,21 @@ void string_bootstrap(object *scope);
 void native_integer_bootstrap(object *scope);
 void boolean_bootstrap(object *scope);
 void runtime_bootstrap(object *scope);
-void closure_bootstrap(object *scope);
 
 object *string_new(char *buf);
 object *native_integer_new(intptr_t number);
-object *closure_new(array_t *arg_names, expr_t *body, object *scope);
 
 typedef struct Scope Scope;
 
 object *scope_derive(object *self);
 void scope_set(object *self, object *key, object *value);
 object *scope_lookup(object *self, object *key, bool *found);
+
+extern slot_definition Trait_slots[];
+extern slot_definition Object_slots[];
+extern slot_definition Closure_slots[];
+extern slot_definition Symbol_slots[];
+extern slot_definition nil_slots[];
 
 extern trait *NativeInteger_trait;
 extern object *singleton_true;

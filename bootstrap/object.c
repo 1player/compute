@@ -8,13 +8,22 @@
 #include "builtins.h"
 #include "lib.h"
 
-typedef struct Symbol {
-  size_t handle;
-} Symbol;
+
+typedef struct Closure {
+  object *(*entrypoint)();
+  void *data;
+} Closure;
+
+typedef struct __lookup {
+  enum slot_type type;
+  Closure *closure;
+  size_t offset; // Offset of this trait's data in the object's body
+} __lookup;
 
 trait *Trait_trait;
 trait *Object_trait;
 trait *Symbol_trait;
+trait *Closure_trait;
 trait *nil_trait;
 
 object *inspect_s; // the symbol "inspect"
@@ -46,33 +55,6 @@ object *intern(char *string) {
 }
 
 
-object *object_inspect(object *self) {
-  if (self == NULL) {
-    return string_new("nil");
-  }
-
-  char *buf;
-  asprintf(&buf, "<Object %p>", self);
-  object *s = string_new(buf);
-  free(buf);
-  return s;
-}
-
-object *object_is(object *self, object *other) {
-  if (self == other) {
-    return singleton_true;
-  }
-  return singleton_false;
-}
-
-
-object *symbol_inspect(Symbol *self) {
-  char *buf;
-  asprintf(&buf, "#%s", string_table_get_key(global_symbol_table, self->handle));
-  object *s = string_new(buf);
-  free(buf);
-  return s;
-}
 
 static object *object_alloc(trait *_trait, size_t data_size) {
   void **m = calloc(1, sizeof(trait *) + data_size);
@@ -107,7 +89,7 @@ static void trait_set_slots(trait *self, size_t n_slots, slot_definition defs[])
     self->selectors[i] = intern(defs[i].selector);
 
     if (defs[i].type == METHOD_SLOT) {
-      self->slots[i] = defs[i].value;
+      self->slots[i] = closure_new(defs[i].value, NULL);
     } else {
       panic("Unimplemented setting DATA_SLOTS");
     }
@@ -153,26 +135,57 @@ object *object_new(trait *_trait) {
   return o;
 }
 
-object *trait_lookup(trait *self, object *name) {
+
+object *closure_new(void *entrypoint, void *data) {
+  Closure *self = (Closure *)object_new(Closure_trait);
+  self->entrypoint = entrypoint;
+  self->data = data;
+
+  return (object *)self;
+}
+
+object *closure_new_interpreted(array_t *arg_names, expr_t *body, object *scope) {
+  interpreted_closure_t *i = (interpreted_closure_t *)malloc(sizeof(interpreted_closure_t));
+  i->arg_names = arg_names;
+  i->body = body;
+  i->scope = scope;
+
+  return closure_new(eval_interpreted_closure, i);
+}
+
+__lookup *trait_lookup(trait *self, object *name) {
   trait *t = self;
+  __lookup *result = malloc(sizeof(__lookup));
 
   while (t) {
     for (size_t pos = 0; pos < t->n_slots; pos++) {
-      if (t->selectors[pos] == name) {
-        return t->slots[pos];
+      if (t->selectors[pos] != name) {
+        continue;
       }
+
+      if (IS_NATIVE(t->slots[pos])) {
+        result->type = DATA_SLOT;
+      } else {
+        result->type = METHOD_SLOT;
+        result->closure = (Closure *)t->slots[pos];
+      }
+
+      goto end;
     }
 
+    result->offset += t->data_size;
     t = t->parent;
   }
 
+  result->type = UNSET_SLOT;
 
-  return NULL;
+ end:
+  return result;
 }
 
 object *send_(object *receiver, object *selector, int n_args, ...);
 
-void *bind(object *receiver, object *name) {
+__lookup *bind(object *receiver, object *name) {
   trait *_trait;
 
   if (receiver == NULL) {
@@ -183,97 +196,61 @@ void *bind(object *receiver, object *name) {
     _trait = TRAIT(receiver);
   }
 
-  object *value;
-
   if (_trait == Trait_trait) {
-    value = trait_lookup(_trait, name);
-  } else {
-    value = send_((object *)_trait, lookup_s, 1, name);
+    return trait_lookup(_trait, name);
   }
 
-  // TODO: this has no business doing here. Should be moved after we
-  // implement our equivalent of `doesNotUnderstand`
-  if (!value) {
-    panic("%s does not respond to %s", inspect(receiver), inspect(name));
-  }
-
-  return value;
+  return (__lookup *)send_((object *)_trait, lookup_s, 1, name);
 }
-
-#define PREPARE_SEND(receiver, selector, n_args) ({ \
-      void *value = bind((receiver), (selector));   \
-      if (IS_NATIVE(value)) {                       \
-        panic("Unimplemented fetching data slot."); \
-      }                                             \
-      value;                                        \
-    })
-
-#define DISPATCH(fn, n_args, next_arg) ({                               \
-      object *ret;                                                      \
-      object *arg1, *arg2, *arg3;                                       \
-      switch ((n_args)) {                                               \
-      case 0:                                                           \
-        ret = fn(receiver);                                             \
-        break;                                                          \
-      case 1:                                                           \
-        ret = fn(receiver, (next_arg));                                 \
-        break;                                                          \
-      case 2:                                                           \
-        arg1 = (next_arg);                                              \
-        arg2 = (next_arg);                                              \
-        ret = fn(receiver, arg1, arg2);                                 \
-        break;                                                          \
-      case 3:                                                           \
-        arg1 = (next_arg);                                              \
-        arg2 = (next_arg);                                              \
-        arg3 = (next_arg);                                              \
-        ret = fn(receiver, arg1, arg2, arg3);                           \
-        break;                                                          \
-      default:                                                          \
-        panic("Sending messages with %d arguments not implemented\n", n_args); \
-      }                                                                 \
-      ret;                                                              \
-    })
 
 object *send_(object *receiver, object *selector, int n_args, ...) {
-  object *ret = NULL;
-  va_list args;
-  va_start(args, n_args);
+  va_list va;
+  va_start(va, n_args);
 
-  void *(*fn)() = PREPARE_SEND(receiver, selector, n_args);
-  ret = DISPATCH(fn, n_args, va_arg(args, object *));
+  object **args = (object **)alloca(n_args * sizeof(object *));
+  for (int i = 0; i < n_args; i++) {
+    args[i] = va_arg(va, object *);
+  }
 
-  va_end(args);
-  return ret;
+  va_end(va);
+
+  return send_args(receiver, selector, n_args, args);
 }
 
-object *send_args(object *receiver, object *selector, int n_args, object **args) {
-  void *(*fn)() = PREPARE_SEND(receiver, selector, n_args);
-  return DISPATCH(fn, n_args, *args++);
+object *send_args(object *rcv, object *sel, int n_args, object **args) {
+  __lookup *l = bind(rcv, sel);
+  if (l->type == UNSET_SLOT) {
+    panic("%s does not respond to %s", inspect(rcv), inspect(sel));
+  } else if (l->type == DATA_SLOT) {
+    panic("Unimplemented fetching data slot.");
+  }
+
+  Closure *closure = l->closure;
+  void *trait_data = (char *)&rcv[l->offset];
+
+  free(l);
+
+  // Can we make this better, please?
+  object *arg1, *arg2, *arg3;
+  switch ((n_args)) {
+  case 0:
+    return closure->entrypoint(closure->data, trait_data, rcv);
+  case 1:
+    return closure->entrypoint(closure->data, trait_data, rcv, *args++);
+  case 2:
+    arg1 = *args++;
+    arg2 = *args++;
+    return closure->entrypoint(closure->data, trait_data, rcv, arg1, arg2);
+  case 3:
+    arg1 = *args++;
+    arg2 = *args++;
+    arg3 = *args++;
+    return closure->entrypoint(closure->data, trait_data, rcv, arg1, arg2, arg3);
+  }
+
+  panic("Sending messages with %d arguments not implemented\n", n_args);
+  return NULL;
 }
-
-
-static slot_definition Trait_slots[] = {
-  { .type = METHOD_SLOT, .selector = "lookup",  .value = trait_lookup },
-  { 0 },
-};
-
-static slot_definition Object_slots[] = {
-  { .type = METHOD_SLOT, .selector = "inspect", .value = object_inspect },
-  { .type = METHOD_SLOT, .selector = "==",      .value = object_is },
-  { .type = METHOD_SLOT, .selector = "===",     .value = object_is },
-  { 0 },
-};
-
-static slot_definition Symbol_slots[] = {
-  { .type = METHOD_SLOT, .selector = "inspect", .value = symbol_inspect },
-  { 0 },
-};
-
-static slot_definition nil_slots[] = {
-  { .type = METHOD_SLOT, .selector = "inspect", .value = object_inspect },
-  { 0 },
-};
 
 object *root_scope_bootstrap() {
   // The Piumarta loop
@@ -291,12 +268,16 @@ object *root_scope_bootstrap() {
   Symbol_trait = trait_alloc(Object_trait, sizeof(Symbol), count_slots(Symbol_slots));
   global_symbol_table = string_table_new();
 
-  // Now intern should work, so fill in the slots of Trait, Object, and Symbol
+  // Set up closures
+  Closure_trait = trait_alloc(Object_trait, sizeof(Closure), count_slots(Closure_slots));
+
+  // Now intern and closures should work, so fill in the slots of Trait, Object, and Symbol
   inspect_s = intern("inspect");
   lookup_s = intern("lookup");
 
   trait_set_slots(Trait_trait, count_slots(Trait_slots), Trait_slots);
   trait_set_slots(Object_trait, count_slots(Object_slots), Object_slots);
+  trait_set_slots(Closure_trait, count_slots(Closure_slots), Closure_slots);
   trait_set_slots(Symbol_trait, count_slots(Symbol_slots), Symbol_slots);
   trait_set_slots(nil_trait, count_slots(nil_slots), nil_slots);
 
@@ -306,7 +287,6 @@ object *root_scope_bootstrap() {
 
   // Now bootstrap all the builtin objects
   native_integer_bootstrap(root_scope);
-  closure_bootstrap(root_scope);
   string_bootstrap(root_scope);
   boolean_bootstrap(root_scope);
   runtime_bootstrap(root_scope);

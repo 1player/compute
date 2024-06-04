@@ -2,7 +2,7 @@ CC := gcc
 LD := gcc
 
 
-CFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra -I $(CURDIR)
+CFLAGS := -g -std=gnu17 -MMD -MP -Wall -Wextra -Wno-unused-parameter -I $(CURDIR)
 # Temporarily to make sure function pointers are not considered NativeIntegers
 # We can remove once we store closure objects inside method slots
 CFLAGS += -falign-functions=16

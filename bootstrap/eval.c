@@ -128,19 +128,24 @@ static object *eval_closure(expr_t *expr, object *scope) {
     array_append(arg_names, name);
   }
 
-  return closure_new(arg_names, expr->closure.block, scope);
+  return closure_new_interpreted(arg_names, expr->closure.block, scope);
 }
 
-object *eval_closure_call(expr_t *body, object *scope, array_t *arg_names, va_list arg_values) {
-  // Create a new child scope and set all the names of arguments to the passed values
-  object *inner_scope = scope_derive(scope);
+object *eval_interpreted_closure(interpreted_closure_t *c, void *tdata, object *receiver, ...) {
+  va_list va;
+  va_start(va, receiver);
 
-  array_foreach(arg_names, object *, arg_name) {
-    object *arg_value = va_arg(arg_values, object *);
+  // Create a new child scope and set all the names of arguments to the passed values
+  object *inner_scope = scope_derive(c->scope);
+
+  array_foreach(c->arg_names, object *, arg_name) {
+    object *arg_value = va_arg(va, object *);
     scope_set(inner_scope, arg_name, arg_value);
   }
 
-  return eval_block(body, inner_scope);
+  va_end(va);
+
+  return eval_block(c->body, inner_scope);
 }
 
 object *eval(expr_t *expr, object *scope) {

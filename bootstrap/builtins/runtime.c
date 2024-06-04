@@ -1,6 +1,6 @@
 #include "builtins.h"
 
-object *runtime_assert(object *self, object *left, object *right) {
+HANDLER(Runtime__assert, object *left, object *right) {
   (void)self;
 
   object *cmp = send(left, intern("=="), right);
@@ -11,7 +11,7 @@ object *runtime_assert(object *self, object *left, object *right) {
 }
 
 static slot_definition Runtime_slots[] = {
-  { .type = METHOD_SLOT, .selector = "assert", .value = runtime_assert },
+  { .type = METHOD_SLOT, .selector = "assert", .value = Runtime__assert },
   { 0 },
 };
 

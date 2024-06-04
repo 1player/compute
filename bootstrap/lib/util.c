@@ -17,6 +17,7 @@ void panic(const char *msg, ...) {
   fputc('\n', stderr);
 
   exit(1);
+  __builtin_unreachable();
 }
 
 void info(const char *msg, ...) {

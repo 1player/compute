@@ -22,44 +22,51 @@ object *string_new(char *buf) {
   return (object *)str;
 }
 
-static object *string_equals(String *self, String *other) {
-  if (strequals(self->buf, self->len, other->buf, other->len)) {
+HANDLER(String__equals, String *other) {
+  String *self_ = (String *)self;
+
+  if (strequals(self_->buf, self_->len, other->buf, other->len)) {
     return singleton_true;
   }
 
   return singleton_false;
 }
 
-object *string_concat(String *self, String *other) {
-  String *str = string_new_with_size(self->len + other->len);
+HANDLER(String__concat, String *other) {
+  String *self_ = (String *)self;
+  String *str = string_new_with_size(self_->len + other->len);
 
-  memmove(str->buf, self->buf, self->len);
-  memmove(&str->buf[self->len], other->buf, other->len);
+  memmove(str->buf, self_->buf, self_->len);
+  memmove(&str->buf[self_->len], other->buf, other->len);
 
   return (object *)str;
 }
 
-object *string_inspect(String *self) {
-  char *buf = malloc(self->len + 2 + 1);
+HANDLER(String__inspect) {
+  String *self_ = (String *)self;
+
+  char *buf = malloc(self_->len + 2 + 1);
   buf[0] = '"';
-  memcpy(&buf[1], self->buf, self->len);
-  buf[self->len + 1] = '"';
-  buf[self->len + 2] = 0;
+  memcpy(&buf[1], self_->buf, self_->len);
+  buf[self_->len + 1] = '"';
+  buf[self_->len + 2] = 0;
 
   return string_new(buf);
 }
 
-object *string_println(String *self) {
-  fwrite(self->buf, self->len, 1, stdout);
+HANDLER(String__println) {
+  String *self_ = (String *)self;
+
+  fwrite(self_->buf, self_->len, 1, stdout);
   fputc('\n', stdout);
   return NULL;
 }
 
 static slot_definition String_slots[] = {
-  { .type = METHOD_SLOT, .selector = "==",      .value = string_equals },
-  { .type = METHOD_SLOT, .selector = "concat",  .value = string_concat },
-  { .type = METHOD_SLOT, .selector = "println", .value = string_println },
-  { .type = METHOD_SLOT, .selector = "inspect", .value = string_inspect },
+  { .type = METHOD_SLOT, .selector = "==",      .value = String__equals },
+  { .type = METHOD_SLOT, .selector = "concat",  .value = String__concat },
+  { .type = METHOD_SLOT, .selector = "println", .value = String__println },
+  { .type = METHOD_SLOT, .selector = "inspect", .value = String__inspect },
   { 0 },
 };
 

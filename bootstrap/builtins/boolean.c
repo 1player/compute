@@ -4,7 +4,7 @@
 object *singleton_true;
 object *singleton_false;
 
-object *boolean_inspect(object *self) {
+HANDLER(Boolean__inspect) {
   if (self == singleton_true) {
     return string_new("true");
   } else if (self == singleton_false) {
@@ -16,7 +16,7 @@ object *boolean_inspect(object *self) {
 }
 
 static slot_definition Boolean_slots[] = {
-  { .type = METHOD_SLOT, .selector = "inspect", .value = boolean_inspect },
+  { .type = METHOD_SLOT, .selector = "inspect", .value = Boolean__inspect },
   { 0 },
 };
 
