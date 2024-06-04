@@ -30,6 +30,7 @@ static int operator_precedence(enum token_type tok) {
 
   case '*':
   case '/':
+  case '%':
     return 40;
 
   case '(':

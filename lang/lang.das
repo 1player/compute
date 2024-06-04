@@ -8,6 +8,7 @@ Runtime.assert(1 == 2, false)
 // Arithmetic and operator precedence
 Runtime.assert(5 * 4 + 3, 23)
 Runtime.assert(5 + 4 * 3, 17)
+Runtime.assert(13 % 15 == 0, false)
 
 // Assignments and block scoping
 selfTest__x := 137
