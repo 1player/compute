@@ -32,6 +32,12 @@ Runtime.assert(y, 20)
 Runtime.assert("foo".concat("bar"), "foobar")
 Runtime.assert("foo".concat("bar") === "foobar", false)
 
+// Loops
+x = 5
+loop x > 0 {
+  x = x - 1
+}
+Runtime.assert(x, 0)
 
 // Closures (WIP)
 add1 := func(n) { n + 1 }

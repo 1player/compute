@@ -12,12 +12,17 @@ enum token_type {
   TOKEN_ID,
   TOKEN_STRING,
   TOKEN_NUMBER,
-  TOKEN_DEFINE, // :=
-  TOKEN_EQUALS, // ==
-  TOKEN_IS,     // ===
-  TOKEN_IF,     // if
-  TOKEN_ELSE,   // else
-  TOKEN_FUNC,   // func
+  TOKEN_DEFINE,   // :=
+  TOKEN_EQUALS,   // ==
+  TOKEN_GTE,      // >=
+  TOKEN_LTE,      // <=
+  TOKEN_IS,       // ===
+  TOKEN_IF,       // if
+  TOKEN_ELSE,     // else
+  TOKEN_FUNC,     // func
+  TOKEN_LOOP,     // loop
+  TOKEN_BREAK,    // break
+  TOKEN_CONTINUE, // continue
 };
 
 typedef struct token {
@@ -57,6 +62,7 @@ enum expr_type {
   EXPR_BLOCK,
   EXPR_CONDITIONAL,
   EXPR_CLOSURE,
+  EXPR_LOOP,
 };
 
 typedef struct expr_t {
@@ -105,6 +111,11 @@ typedef struct expr_t {
       array_t *args;
       struct expr_t *block;
     } closure;
+
+    struct {
+      struct expr_t *condition;
+      struct expr_t *block;
+    } loop;
   };
 } expr_t;
 

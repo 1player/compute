@@ -12,6 +12,9 @@ static struct {
   { "if",   TOKEN_IF },
   { "else", TOKEN_ELSE },
   { "func", TOKEN_FUNC },
+  { "loop", TOKEN_LOOP },
+  { "break", TOKEN_BREAK },
+  { "continue", TOKEN_CONTINUE },
 };
 
 static const int n_keywords = sizeof(keyword_table) / sizeof(keyword_table[0]);
@@ -131,10 +134,11 @@ char *lexer_explain(token_t *tok) {
   char *e = NULL;
 
   if ((int)tok->type > 0 && (int)tok->type < 256) {
-    asprintf(&e, "character '%c'", (unsigned char)tok->type);
+    asprintf(&e, "%c", (unsigned char)tok->type);
     return e;
   }
 
+  // TODO: lookup the keyword in the keyword table
   switch (tok->type) {
   case TOKEN_EOF:
     asprintf(&e, "EOF");
@@ -168,6 +172,14 @@ char *lexer_explain(token_t *tok) {
     asprintf(&e, "===");
     break;
 
+  case TOKEN_GTE:
+    asprintf(&e, ">=");
+    break;
+
+  case TOKEN_LTE:
+    asprintf(&e, "<=");
+    break;
+
   case TOKEN_IF:
     asprintf(&e, "if");
     break;
@@ -178,6 +190,18 @@ char *lexer_explain(token_t *tok) {
 
   case TOKEN_FUNC:
     asprintf(&e, "func");
+    break;
+
+  case TOKEN_LOOP:
+    asprintf(&e, "loop");
+    break;
+
+  case TOKEN_BREAK:
+    asprintf(&e, "break");
+    break;
+
+  case TOKEN_CONTINUE:
+    asprintf(&e, "continue");
     break;
   }
 
@@ -247,6 +271,26 @@ int lexer_next(lexer_t *lexer, token_t *token) {
   case '%':
     token->type = c;
     advance(lexer);
+    break;
+
+  case '<':
+    if (peek_at(lexer, 1) == '=') {
+      token->type = TOKEN_LTE;
+      lexer->ptr += 2;
+    } else {
+      token->type = c;
+      lexer->ptr++;
+    }
+    break;
+
+  case '>':
+    if (peek_at(lexer, 1) == '=') {
+      token->type = TOKEN_GTE;
+      lexer->ptr += 2;
+    } else {
+      token->type = c;
+      lexer->ptr++;
+    }
     break;
 
   case '\n':

@@ -28,6 +28,22 @@ HANDLER(NativeInteger__mod, NativeInteger other) {
   return TO_NATIVE(FROM_NATIVE(self) % FROM_NATIVE(other));
 }
 
+HANDLER(NativeInteger__lt, NativeInteger other) {
+  return FROM_NATIVE(self) < FROM_NATIVE(other) ? singleton_true : singleton_false;
+}
+
+HANDLER(NativeInteger__lte, NativeInteger other) {
+  return FROM_NATIVE(self) <= FROM_NATIVE(other) ? singleton_true : singleton_false;
+}
+
+HANDLER(NativeInteger__gt, NativeInteger other) {
+  return FROM_NATIVE(self) > FROM_NATIVE(other) ? singleton_true : singleton_false;
+}
+
+HANDLER(NativeInteger__gte, NativeInteger other) {
+  return FROM_NATIVE(self) >= FROM_NATIVE(other) ? singleton_true : singleton_false;
+}
+
 HANDLER(NativeInteger__inspect) {
   char *buf;
   asprintf(&buf, "%ld", FROM_NATIVE(self));
@@ -40,6 +56,10 @@ static slot_definition NativeInteger_slots[] = {
   { .type = METHOD_SLOT, .selector = "*", .value = NativeInteger__multiply },
   { .type = METHOD_SLOT, .selector = "/", .value = NativeInteger__divide },
   { .type = METHOD_SLOT, .selector = "%", .value = NativeInteger__mod },
+  { .type = METHOD_SLOT, .selector = "<", .value = NativeInteger__lt },
+  { .type = METHOD_SLOT, .selector = "<=", .value = NativeInteger__lte },
+  { .type = METHOD_SLOT, .selector = ">", .value = NativeInteger__gt },
+  { .type = METHOD_SLOT, .selector = ">=", .value = NativeInteger__gte },
   { .type = METHOD_SLOT, .selector = "inspect", .value = NativeInteger__inspect },
   { 0 },
 };

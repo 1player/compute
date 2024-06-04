@@ -224,6 +224,19 @@ expr_t *closure(parser_t *parser) {
   return expr;
 }
 
+expr_t *loop(parser_t *parser) {
+  if (expect_and_advance(parser, TOKEN_LOOP)) {
+    return NULL;
+  }
+
+  expr_t *expr = new_expr(EXPR_LOOP);
+  TRY(expr->loop.condition = expression(parser));
+  TRY(expr->loop.block = block(parser));
+
+  return expr;
+}
+
+
 expr_t *atom(parser_t *parser) {
   expr_t *expr = NULL;
 
@@ -268,6 +281,10 @@ expr_t *atom(parser_t *parser) {
     expr = closure(parser);
     break;
 
+  case TOKEN_LOOP:
+    expr = loop(parser);
+    break;
+
   default:
     char *e = lexer_explain(&parser->cur_token);
     parser_error(parser, "Unexpected %s while parsing expression", e);
@@ -306,8 +323,12 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
     case '*':
     case '/':
     case '%':
-    case TOKEN_EQUALS:
     case TOKEN_IS:
+    case '<':
+    case '>':
+    case TOKEN_EQUALS:
+    case TOKEN_LTE:
+    case TOKEN_GTE:
       advance(parser);
 
       if (!(right = expression_(parser, next_min_precedence))) {
@@ -326,6 +347,10 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
         asprintf(name, "==");
       } else if (tok == TOKEN_IS) {
         asprintf(name, "===");
+      } else if (tok == TOKEN_LTE) {
+        asprintf(name, "<=");
+      } else if (tok == TOKEN_GTE) {
+        asprintf(name, ">=");
       } else {
         panic("Unimplemented");
       }

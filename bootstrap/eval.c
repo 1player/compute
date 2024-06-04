@@ -4,6 +4,10 @@
 #include "object.h"
 #include "builtins.h"
 
+static bool true_condition(object *test) {
+  return test != NULL && test != singleton_false;
+}
+
 static object *eval_literal(expr_t *expr, object *scope_) {
   (void)scope_;
 
@@ -75,9 +79,7 @@ static object *eval_assignment(expr_t *expr, object *scope) {
   return obj;
 }
 
-static object *eval_block(expr_t *expr, object *scope) {
-  object *inner_scope = scope_derive(scope);
-
+static object *eval_block_with_scope(expr_t *expr, object *inner_scope) {
   object *obj = NULL;
   array_foreach(expr->block.exprs, expr_t *, inner_expr) {
     obj = eval(inner_expr, inner_scope);
@@ -86,11 +88,16 @@ static object *eval_block(expr_t *expr, object *scope) {
   return obj;
 }
 
+static object *eval_block(expr_t *expr, object *scope) {
+  object *inner_scope = scope_derive(scope);
+  return eval_block_with_scope(expr, inner_scope);
+}
+
 static object *eval_conditional(expr_t *expr, object *scope_) {
   object *test = eval(expr->conditional.test, scope_);
 
   // Only nil and `false` are false
-  if (test != NULL && test != singleton_false) {
+  if (true_condition(test)) {
     return eval(expr->conditional.if_block, scope_);
   }
 
@@ -99,6 +106,17 @@ static object *eval_conditional(expr_t *expr, object *scope_) {
   }
 
   return NULL;
+}
+
+static object *eval_loop(expr_t *expr, object *scope) {
+  object *o = NULL;
+  object *inner_scope = scope_derive(scope);
+
+  while (true_condition(eval(expr->loop.condition, scope))) {
+    o = eval_block_with_scope(expr->loop.block, inner_scope);
+  }
+
+  return o;
 }
 
 static object *eval_closure(expr_t *expr, object *scope) {
@@ -170,6 +188,10 @@ object *eval(expr_t *expr, object *scope) {
 
   case EXPR_CLOSURE:
     result = eval_closure(expr, scope);
+    break;
+
+  case EXPR_LOOP:
+    result = eval_loop(expr, scope);
     break;
 
   default:
