@@ -248,6 +248,8 @@ expr_t *loop(parser_t *parser) {
 expr_t *atom(parser_t *parser) {
   expr_t *expr = NULL;
 
+  skip_empty(parser);
+
   enum token_type tok = peek(parser);
   switch ((int)tok) {
   case '(':
