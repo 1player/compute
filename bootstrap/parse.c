@@ -127,6 +127,14 @@ static array_t *arg_list(parser_t *parser) {
   return args;
 }
 
+// Parse an argument list only if there is one, otherwise return an empty array
+static array_t *maybe_arg_list(parser_t *parser) {
+  if (peek(parser) == '(')
+    return arg_list(parser);
+
+  return array_new();
+}
+
 void synchronize(parser_t *parser) {
   enum token_type tok;
 
@@ -415,9 +423,9 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
       expr->send.receiver = result;
       expr->send.selector = new_expr(EXPR_IDENTIFIER);
       expr->send.selector->identifier.name = parser->cur_token.value_id;
-
       advance(parser);
-      if (!(expr->send.args = arg_list(parser))) {
+
+      if (!(expr->send.args = maybe_arg_list(parser))) {
         return NULL;
       }
 

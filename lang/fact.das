@@ -6,4 +6,4 @@ fact := func(n) {
   }
 }
 
-fact(6).inspect().println()
+fact(6).inspect.println

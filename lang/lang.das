@@ -39,8 +39,8 @@ loop x > 0 {
 }
 Runtime.assert(x, 0)
 
-// Closures (WIP)
+// Closures
 add1 := func(n) { n + 1 }
 Runtime.assert(add1(5), 6)
 
-"Self-test passed.".println()
+"Self-test passed.".println

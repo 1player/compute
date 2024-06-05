@@ -1,12 +1,12 @@
 fizzbuzz := func (n) {
   if n % 15 == 0 {
-    "fizzbuzz".println()
+    "fizzbuzz".println
   } else if n % 3 == 0 {
-    "fizz".println()
+    "fizz".println
   } else if n % 5 == 0 {
-    "buzz".println()
+    "buzz".println
   } else {
-    n.inspect().println()
+    n.inspect.println
   }
 }
 
