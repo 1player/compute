@@ -12,6 +12,6 @@ fizzbuzz := func (n) {
 
 n := 1
 loop n <= 100 {
-  scope.fizzbuzz(n)
+  fizzbuzz(n)
   n = n + 1
 }

@@ -194,6 +194,10 @@ object *eval(expr_t *expr, object *scope) {
     result = eval_loop(expr, scope);
     break;
 
+  case EXPR_SCOPE:
+    result = scope;
+    break;
+
   default:
     info("Eval of %d not implemented", expr->type);
   }

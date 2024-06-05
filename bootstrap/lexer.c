@@ -15,6 +15,8 @@ static struct {
   { "loop", TOKEN_LOOP },
   { "break", TOKEN_BREAK },
   { "continue", TOKEN_CONTINUE },
+  { "scope", TOKEN_SCOPE },
+  { "self", TOKEN_SELF },
 };
 
 static const int n_keywords = sizeof(keyword_table) / sizeof(keyword_table[0]);
@@ -202,6 +204,14 @@ char *lexer_explain(token_t *tok) {
 
   case TOKEN_CONTINUE:
     asprintf(&e, "continue");
+    break;
+
+  case TOKEN_SCOPE:
+    asprintf(&e, "scope");
+    break;
+
+  case TOKEN_SELF:
+    asprintf(&e, "self");
     break;
   }
 

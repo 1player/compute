@@ -285,6 +285,16 @@ expr_t *atom(parser_t *parser) {
     expr = loop(parser);
     break;
 
+  case TOKEN_SCOPE:
+    expr = new_expr(EXPR_SCOPE);
+    advance(parser);
+    break;
+
+  case TOKEN_SELF:
+    expr = new_expr(EXPR_SELF);
+    advance(parser);
+    break;
+
   default:
     char *e = lexer_explain(&parser->cur_token);
     parser_error(parser, "Unexpected %s while parsing expression", e);
@@ -298,11 +308,12 @@ expr_t *atom(parser_t *parser) {
 
 
 static expr_t *expression_(parser_t *parser, int min_precedence) {
-  expr_t *result = atom(parser);
-  if (!result) {
+  expr_t *left = atom(parser);
+  if (!left) {
     return NULL;
   }
 
+  expr_t *result = left;
   expr_t *expr, *right;
   enum token_type tok;
 
@@ -376,13 +387,19 @@ static expr_t *expression_(parser_t *parser, int min_precedence) {
       break;
 
     case '(':
+      if (left->type != EXPR_IDENTIFIER) {
+        parser_error(parser, "Expected identifier before argument list");
+        return NULL;
+      }
+
       expr = new_expr(EXPR_SEND);
-      expr->send.receiver = new_expr(EXPR_SELF);
-      expr->send.selector = result;
+      expr->send.receiver = new_expr(EXPR_SCOPE);
+      expr->send.selector = left;
       if (!(expr->send.args = arg_list(parser))) {
         return NULL;
       }
       result = expr;
+
       break;
 
     case '.':

@@ -23,6 +23,8 @@ enum token_type {
   TOKEN_LOOP,     // loop
   TOKEN_BREAK,    // break
   TOKEN_CONTINUE, // continue
+  TOKEN_SCOPE,    // scope
+  TOKEN_SELF,     // self
 };
 
 typedef struct token {
@@ -63,6 +65,7 @@ enum expr_type {
   EXPR_CONDITIONAL,
   EXPR_CLOSURE,
   EXPR_LOOP,
+  EXPR_SCOPE,
 };
 
 typedef struct expr_t {

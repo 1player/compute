@@ -122,7 +122,5 @@ object *scope_bootstrap() {
   Scope_trait = trait_derive(Object_trait, sizeof(Scope), Scope_slots);
 
   object *the_RootScope = scope_derive(NULL);
-  scope_assign(the_RootScope, intern("scope"), the_RootScope, true);
-
   return the_RootScope;
 }

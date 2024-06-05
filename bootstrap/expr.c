@@ -52,10 +52,6 @@ static void dump(int indent, expr_t *expr) {
     }
     break;
 
-  case EXPR_SELF:
-    emit("Self");
-    break;
-
   case EXPR_IDENTIFIER:
     emit("Identifier(%s)", expr->identifier.name);
     break;
@@ -110,6 +106,14 @@ static void dump(int indent, expr_t *expr) {
     ln(indent + 1); emit("condition: "); dump(indent + 1, expr->loop.condition);
     ln(indent + 1); emit("block: "); dump(indent + 1, expr->loop.block);
     ln(indent); emit("}");
+    break;
+
+  case EXPR_SELF:
+    emit("Self");
+    break;
+
+  case EXPR_SCOPE:
+    emit("Scope");
     break;
 
   default:

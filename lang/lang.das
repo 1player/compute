@@ -41,6 +41,6 @@ Runtime.assert(x, 0)
 
 // Closures (WIP)
 add1 := func(n) { n + 1 }
-Runtime.assert(scope.add1(5), 6)
+Runtime.assert(add1(5), 6)
 
 "Self-test passed.".println()
